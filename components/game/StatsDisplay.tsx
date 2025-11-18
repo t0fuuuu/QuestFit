@@ -48,10 +48,10 @@ export const StatsDisplay: React.FC<StatsDisplayProps> = ({ profile }) => {
           <Text style={styles.statLabel}>Calories</Text>
         </View>
         
-        <View style={styles.statItem}>
+        {/* <View style={styles.statItem}>
           <Text style={styles.statValue}>{(totalDistance / 1000).toFixed(1)}km</Text>
           <Text style={styles.statLabel}>Distance</Text>
-        </View>
+        </View> */}
         
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{capturedCreatures.length}</Text>

@@ -287,7 +287,7 @@ export default function XPManagementScreen() {
               <View style={styles.historyRight}>
                 <Text style={styles.historyXP}>+{item.xpEarned} XP</Text>
               </View>
-           s</View>
+           </View>
           ))}
         </View>
       )}
