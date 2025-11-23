@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 
-// Store the signature secret (in production, use environment variables or database)
-let SIGNATURE_SECRET: string | null = null;
+// Signature secret from Polar webhook creation
+const SIGNATURE_SECRET = 'b9ea4ffb-963e-4c44-b607-cc0617124ebc';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('Webhook received:', req.method, req.body);
@@ -17,8 +17,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST') {
     const signature = req.headers['polar-webhook-signature'] as string;
     
-    // Verify signature if we have the secret
-    if (SIGNATURE_SECRET && signature) {
+    // Verify signature
+    if (signature) {
       const body = JSON.stringify(req.body);
       const expectedSignature = crypto
         .createHmac('sha256', SIGNATURE_SECRET)
@@ -26,22 +26,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .digest('hex');
       
       if (signature !== expectedSignature) {
-        console.error('Invalid signature');
+        console.error('Invalid signature - Expected:', expectedSignature, 'Got:', signature);
         return res.status(401).json({ error: 'Invalid signature' });
       }
+      
+      console.log('✅ Signature verified');
     }
 
-    console.log('Webhook event received:', req.body);
+    console.log('🔔 Webhook event received:', JSON.stringify(req.body, null, 2));
     
     // Process the webhook event here
-    // You can add logic to handle EXERCISE, SLEEP, etc. events
+    // Event types: EXERCISE, SLEEP, ACTIVITY_SUMMARY
+    const event = req.body;
+    
+    if (event.event === 'EXERCISE') {
+      console.log('💪 New exercise data available for user:', event.user_id);
+      // TODO: Fetch and process exercise data
+    } else if (event.event === 'SLEEP') {
+      console.log('😴 New sleep data available for user:', event.user_id);
+      // TODO: Fetch and process sleep data
+    } else if (event.event === 'ACTIVITY_SUMMARY') {
+      console.log('📊 New activity summary available for user:', event.user_id);
+      // TODO: Fetch and process activity summary
+    }
     
     return res.status(200).json({ received: true });
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
-}
-
-export function setSignatureSecret(secret: string) {
-  SIGNATURE_SECRET = secret;
 }
