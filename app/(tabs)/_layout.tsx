@@ -63,7 +63,10 @@ export default function TabLayout() {
       
       if (result) {
         console.log('✅ Polar account linked successfully!');
-        checkPolarToken();
+        setHasPolarToken(true);
+        
+        // Show success message for 5 seconds
+        alert('Polar connected!');
       } else {
         console.log('❌ Polar linking failed or was cancelled');
       }

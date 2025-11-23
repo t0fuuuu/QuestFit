@@ -98,7 +98,9 @@ class PolarOAuthService {
   getAuthorizationUrl(): string {
     // Don't encode the redirect_uri - Polar expects it unencoded
     const redirectUri = 'https://questfit-pi.vercel.app';
-    const url = `${POLAR_AUTH_URL}?response_type=code&client_id=${POLAR_CLIENT_ID}&redirect_uri=${redirectUri}`;
+    // Request all available scopes including webhook management
+    const scope = ["EXERCISE", "SLEEP", "CONTINUOUS_HEART_RATE"];
+    const url = `${POLAR_AUTH_URL}?response_type=code&client_id=${POLAR_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${scope}`;
     
     return url;
   }
@@ -326,14 +328,15 @@ class PolarOAuthService {
       const accessToken = userDoc.exists() ? userDoc.data()?.polarAccessToken : null;
       const polarUserId = userDoc.exists() ? userDoc.data()?.polarUserId : null;
 
-      // Delete user from Polar AccessLink API
+      // Delete user from Polar AccessLink API via backend
       if (accessToken && polarUserId) {
         try {
           await axios.delete(
-            `https://www.polaraccesslink.com/v3/users/${polarUserId}`,
+            'https://questfit-pi.vercel.app/api/polar/disconnect-user',
             {
-              headers: {
-                'Authorization': `Bearer ${accessToken}`,
+              data: {
+                accessToken: accessToken,
+                polarUserId: polarUserId,
               },
             }
           );
@@ -343,11 +346,14 @@ class PolarOAuthService {
         }
       }
 
-      // Remove tokens from Firebase
+      // Remove all Polar data from Firebase
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         polarAccessToken: null,
         polarUserId: null,
+        weight: null,
+        age: null,
+        gender: null,
       });
 
       console.log('Polar account disconnected');

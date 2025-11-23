@@ -648,6 +648,32 @@ export const xpStyles = StyleSheet.create({
     color: '#6B7280',
     textAlign: 'center',
   },
+  attributesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    gap: 12,
+  },
+  attributeBox: {
+    flex: 1,
+    backgroundColor: '#EFF6FF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  attributeLabel: {
+    fontSize: 12,
+    color: '#1E40AF',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+    fontWeight: '600',
+  },
+  attributeValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1E3A8A',
+  },
   statsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -741,6 +767,19 @@ export const xpStyles = StyleSheet.create({
   creatureStat: {
     fontSize: 11,
     color: '#6B7280',
+    fontWeight: '600',
+  },
+  disconnectPolarButton: {
+    backgroundColor: '#EF4444',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  disconnectPolarButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

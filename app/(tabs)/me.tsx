@@ -10,6 +10,7 @@ import { xpStyles as styles } from '@/src/styles';
 import { Creature } from '@/src/types/polar';
 import creatureService from '@/src/services/creatureService';
 import { getXPToNextLevel, getXPForLevel } from '@/src/utils/levelSystem';
+import { polarOAuthService } from '@/src/services/polarOAuthService';
 
 interface WorkoutHistoryItem {
   sessionId: string;
@@ -29,6 +30,9 @@ export default function XPManagementScreen() {
   const [totalCalories, setTotalCalories] = useState<number>(0);
   const [totalDuration, setTotalDuration] = useState<number>(0);
   const [totalAvgHeartRate, setTotalAvgHeartRate] = useState<number>(0);
+  const [weight, setWeight] = useState<number | null>(null);
+  const [age, setAge] = useState<number | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [xpAmount, setXpAmount] = useState('');
@@ -66,6 +70,9 @@ export default function XPManagementScreen() {
           setTotalCalories(data.totalCalories || 0);
           setTotalDuration(data.totalDuration || 0);
           setTotalAvgHeartRate(data.totalAvgHeartRate || 0);
+          setWeight(data.weight || null);
+          setAge(data.age || null);
+          setGender(data.gender || null);
           
           // grab the full creature data from just the IDs we have stored
           const creatureIds = data.capturedCreatures || [];
@@ -193,8 +200,8 @@ export default function XPManagementScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
-        <Text style={styles.title}>XP Management</Text>
-        <Text style={styles.subtitle}>Manage your experience points</Text>
+        <Text style={styles.title}>Me</Text>
+        <Text style={styles.subtitle}>Manage your Profile</Text>
       </View>
 
       {/* Error Display */}
@@ -204,6 +211,33 @@ export default function XPManagementScreen() {
           <Pressable onPress={loadUserXP} style={styles.retryButton}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
+        </View>
+      )}
+
+      {/* Physical Attributes Display */}
+      {(weight !== null || age !== null || gender !== null) && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Physical Attributes</Text>
+          <View style={styles.attributesContainer}>
+            {weight !== null && (
+              <View style={styles.attributeBox}>
+                <Text style={styles.attributeLabel}>Weight</Text>
+                <Text style={styles.attributeValue}>{weight} kg</Text>
+              </View>
+            )}
+            {age !== null && (
+              <View style={styles.attributeBox}>
+                <Text style={styles.attributeLabel}>Age</Text>
+                <Text style={styles.attributeValue}>{age} years</Text>
+              </View>
+            )}
+            {gender !== null && (
+              <View style={styles.attributeBox}>
+                <Text style={styles.attributeLabel}>Gender</Text>
+                <Text style={styles.attributeValue}>{gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : gender}</Text>
+              </View>
+            )}
+          </View>
         </View>
       )}
 
@@ -378,6 +412,29 @@ export default function XPManagementScreen() {
           Username: {user?.displayName || 'N/A'}
         </Text>
       </View>
+
+      {/* Polar Disconnect Button */}
+      {(weight !== null || age !== null || gender !== null) && (
+        <View style={styles.section}>
+          <Pressable
+            style={styles.disconnectPolarButton}
+            onPress={async () => {
+              if (!user) return;
+              try {
+                await polarOAuthService.disconnectPolarAccount(user.uid);
+                setWeight(null);
+                setAge(null);
+                setGender(null);
+                console.log('✅ Polar account disconnected');
+              } catch (error) {
+                console.error('❌ Error disconnecting Polar:', error);
+              }
+            }}
+          >
+            <Text style={styles.disconnectPolarButtonText}>🔌 Disconnect Polar</Text>
+          </Pressable>
+        </View>
+      )}
     </ScrollView>
   );
 }

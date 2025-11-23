@@ -11,6 +11,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import { SignInScreen } from '@/components/auth/SignInScreen';
 import { View, ActivityIndicator } from 'react-native';
+import DebugConsole from '@/components/DebugConsole';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -85,6 +86,7 @@ function RootLayoutNav() {
           })()}
         </>
       )}
+      <DebugConsole />
     </ThemeProvider>
   );
 }
