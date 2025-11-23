@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Tabs } from 'expo-router';
-import { Pressable, StyleSheet, Image } from 'react-native';
+import { Pressable, StyleSheet, Image, View, Modal } from 'react-native';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/src/hooks/useAuth';
+import { PolarLinkScreen } from '@/components/auth/PolarLinkScreen';
+import { polarOAuthService } from '@/src/services/polarOAuthService';
 
 
 // built-in icon families and icons at https://icons.expo.fyi/
@@ -29,7 +31,20 @@ function TabBarIcon6(props: {
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [showPolarModal, setShowPolarModal] = useState(false);
+  const [hasPolarToken, setHasPolarToken] = useState(false);
+
+  useEffect(() => {
+    checkPolarToken();
+  }, [user]);
+
+  const checkPolarToken = async () => {
+    if (user) {
+      const hasToken = await polarOAuthService.hasAccessToken(user.uid);
+      setHasPolarToken(hasToken);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -39,7 +54,47 @@ export default function TabLayout() {
     }
   };
 
+  const handleLinkPolar = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('🔗 Starting Polar OAuth flow...');
+      const result = await polarOAuthService.startOAuthFlow(user.uid);
+      
+      if (result) {
+        console.log('✅ Polar account linked successfully!');
+        checkPolarToken();
+      } else {
+        console.log('❌ Polar linking failed or was cancelled');
+      }
+    } catch (error) {
+      console.error('Error linking Polar account:', error);
+    }
+  };
+
+  const handlePolarLinkSuccess = () => {
+    setShowPolarModal(false);
+    checkPolarToken();
+  };
+
+  const handlePolarLinkSkip = () => {
+    setShowPolarModal(false);
+  };
+
+  const handleDisconnectPolar = async () => {
+    if (!user) return;
+    
+    try {
+      await polarOAuthService.disconnectPolarAccount(user.uid);
+      setHasPolarToken(false);
+      console.log('✅ Polar account disconnected');
+    } catch (error) {
+      console.error('❌ Error disconnecting Polar:', error);
+    }
+  };
+
   return (
+    <>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
@@ -55,9 +110,19 @@ export default function TabLayout() {
           />
         ),
         headerRight: () => (
-          <Pressable style={styles.signOutButton} onPress={handleSignOut}>
-            <Text style={styles.signOutText}>Sign Out</Text>
-          </Pressable>
+          <View style={styles.headerRightContainer}>
+            <Pressable 
+              style={[styles.polarButton, hasPolarToken && styles.polarButtonConnected]} 
+              onPress={hasPolarToken ? handleDisconnectPolar : handleLinkPolar}
+            >
+              <Text style={styles.polarButtonText}>
+                {hasPolarToken ? '🔌 Disconnect Polar' : 'Link Polar'}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.signOutButton} onPress={handleSignOut}>
+              <Text style={styles.signOutText}>Sign Out</Text>
+            </Pressable>
+          </View>
         ),
       }}>
       <Tabs.Screen
@@ -112,6 +177,23 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+
+    {/* Polar Link Modal */}
+    <Modal
+      visible={showPolarModal}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={() => setShowPolarModal(false)}
+    >
+      {user && (
+        <PolarLinkScreen
+          userId={user.uid}
+          onLinkSuccess={handlePolarLinkSuccess}
+          onSkip={handlePolarLinkSkip}
+        />
+      )}
+    </Modal>
+  </>
   );
 }
 
@@ -122,8 +204,27 @@ const styles = StyleSheet.create({
     marginLeft: 16,
     borderRadius: 16,
   },
-  signOutButton: {
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginRight: 16,
+  },
+  polarButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#3B82F6',
+    borderRadius: 6,
+  },
+  polarButtonConnected: {
+    backgroundColor: '#EF4444',
+  },
+  polarButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  signOutButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: '#EF4444',

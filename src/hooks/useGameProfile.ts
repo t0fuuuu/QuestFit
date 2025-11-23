@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { UserGameProfile } from '../types/polar';
 import gameService from '../services/gameService';

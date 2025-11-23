@@ -1,15 +1,15 @@
-// Level system using a power curve formula for smooth progression
+// using power curve formula for smooth progression
 // XP needed to go from level N to level N+1 = round(80 * level^1.3 + 150)
-// This scales nicely and feels pretty balanced as you level up
+// This scales nicely and feels okish balanced as you level up
 
-// Calculates how much XP is needed to go from one level to the next
+// calculates how much XP is needed to go from one level to the next
 // @param level - the current level you're on
 // @returns XP needed to reach the next level
 function xpToNext(level: number): number {
   return Math.round(80 * Math.pow(level, 1.3) + 150);
 }
 
-// Figures out how much total XP you need to hit a certain level
+// figures out how much total XP you need to hit a certain level
 // @param level - which level you're trying to reach (like level 5)
 // @returns the total amount of XP needed from the start
 export function getXPForLevel(level: number): number {
@@ -24,7 +24,7 @@ export function getXPForLevel(level: number): number {
   return totalXP;
 }
 
-// Works backwards from your XP to figure out what level you should be
+// works backwards from your XP to figure out what level you should be
 // @param xp - how much total XP you've earned
 // @returns your current level
 export function calculateLevel(xp: number): number {
@@ -46,7 +46,7 @@ export function calculateLevel(xp: number): number {
   return level;
 }
 
-// Tells you how much more XP you need to level up
+// tells you how much more XP you need to level up
 // @param currentXP - your total XP right now
 // @param currentLevel - what level you're currently at
 // @returns the XP gap to the next level

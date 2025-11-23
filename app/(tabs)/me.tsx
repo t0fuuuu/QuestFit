@@ -54,53 +54,61 @@ export default function XPManagementScreen() {
       }
 
       const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
+      
+      try {
+        const userDoc = await getDoc(userDocRef);
 
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        setCurrentXP(data.xp || 0);
-        setCurrentLevel(data.level || 1);
-        setTotalWorkouts(data.totalWorkouts || 0);
-        setTotalCalories(data.totalCalories || 0);
-        setTotalDuration(data.totalDuration || 0);
-        setTotalAvgHeartRate(data.totalAvgHeartRate || 0);
-        
-        // grab the full creature data from just the IDs we have stored
-        const creatureIds = data.capturedCreatures || [];
-        const creatures = creatureIds
-          .map((id: string) => creatureService.getCreatureById(id))
-          .filter((c: Creature | null) => c !== null) as Creature[];
-        setCapturedCreatures(creatures);
-        
-        // pull in workout history and only show the last 10 workouts
-        const history = data.workoutHistory || [];
-        const sortedHistory = history
-          .map((item: any) => ({
-            ...item,
-            date: item.date?.toDate ? item.date.toDate() : new Date(item.date)
-          }))
-          .sort((a: WorkoutHistoryItem, b: WorkoutHistoryItem) => 
-            b.date.getTime() - a.date.getTime()
-          )
-          .slice(0, 10);
-        setWorkoutHistory(sortedHistory);
-      } else {
-        // user doc doesnt exist yet so lets make one
-        await setDoc(userDocRef, { 
-          xp: 0, 
-          level: 1,
-          totalWorkouts: 0,
-          totalCalories: 0,
-          workoutHistory: []
-        });
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setCurrentXP(data.xp || 0);
+          setCurrentLevel(data.level || 1);
+          setTotalWorkouts(data.totalWorkouts || 0);
+          setTotalCalories(data.totalCalories || 0);
+          setTotalDuration(data.totalDuration || 0);
+          setTotalAvgHeartRate(data.totalAvgHeartRate || 0);
+          
+          // grab the full creature data from just the IDs we have stored
+          const creatureIds = data.capturedCreatures || [];
+          const creatures = creatureIds
+            .map((id: string) => creatureService.getCreatureById(id))
+            .filter((c: Creature | null) => c !== null) as Creature[];
+          setCapturedCreatures(creatures);
+          
+          // pull in workout history and only show the last 10 workouts
+          const history = data.workoutHistory || [];
+          const sortedHistory = history
+            .map((item: any) => ({
+              ...item,
+              date: item.date?.toDate ? item.date.toDate() : new Date(item.date)
+            }))
+            .sort((a: WorkoutHistoryItem, b: WorkoutHistoryItem) => 
+              b.date.getTime() - a.date.getTime()
+            )
+            .slice(0, 10);
+          setWorkoutHistory(sortedHistory);
+        } else {
+          // user doc doesnt exist yet - set defaults
+          console.log('User document does not exist, using defaults');
+          setCurrentXP(0);
+          setCurrentLevel(1);
+          setTotalWorkouts(0);
+          setTotalCalories(0);
+          setTotalDuration(0);
+          setTotalAvgHeartRate(0);
+          setWorkoutHistory([]);
+          setCapturedCreatures([]);
+        }
+      } catch (firebaseErr) {
+        // Handle Firebase permission errors gracefully
+        console.error('Firebase permission error:', firebaseErr);
+        setError('Unable to access user data. Please check Firebase permissions.');
+        // Set defaults when we can't access Firebase
         setCurrentXP(0);
         setCurrentLevel(1);
         setTotalWorkouts(0);
         setTotalCalories(0);
         setTotalDuration(0);
         setTotalAvgHeartRate(0);
-        setWorkoutHistory([]);
-        setCapturedCreatures([]);
       }
     } catch (err) {
       console.error('Failed to load XP:', err);

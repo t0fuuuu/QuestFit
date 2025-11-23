@@ -72,7 +72,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) =
       
       // Notify auth change listeners
       notifyAuthChange();
-      
       onSignInSuccess?.();
     } catch (err: any) {
       console.error('🔴 Full error object:', err);

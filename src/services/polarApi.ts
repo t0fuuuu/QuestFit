@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { WorkoutData, HeartRateData, UserProfile } from '../types/polar';
+import { polarOAuthService } from './polarOAuthService';
 
 const POLAR_BASE_URL = 'https://www.polaraccesslink.com/v3';
 
@@ -8,6 +9,23 @@ class PolarApiService {
 
   setAccessToken(token: string) {
     this.accessToken = token;
+  }
+
+  /**
+   * Initialize the API service with the user's access token from Firebase
+   */
+  async initializeForUser(userId: string): Promise<boolean> {
+    try {
+      const token = await polarOAuthService.getAccessToken(userId);
+      if (token) {
+        this.setAccessToken(token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error initializing Polar API for user:', error);
+      return false;
+    }
   }
 
   private getHeaders() {

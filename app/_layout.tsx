@@ -63,7 +63,10 @@ function RootLayoutNav() {
 
   // Show sign-in screen if not authenticated
   if (!user) {
-    return <SignInScreen />;
+    return <SignInScreen onSignInSuccess={() => {
+      // Auth state will update automatically via notifyAuthChange
+      // which is called from SignInScreen
+    }} />;
   }
 
   // Show main app if authenticated
