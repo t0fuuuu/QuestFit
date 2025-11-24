@@ -1,10 +1,27 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
+import * as admin from 'firebase-admin';
 
 const POLAR_BASE_URL = 'https://www.polaraccesslink.com/v3';
 
-// In a production environment, you'd fetch this from a database
-// For now, we'll use environment variables or a simple storage mechanism
+// Initialize Firebase Admin SDK (only once)
+if (!admin.apps.length) {
+  // Vercel will provide these via environment variables
+  const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT 
+    ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+    : {
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      };
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
+
+const db = admin.firestore();
+
 interface UserToken {
   userId: string;
   accessToken: string;
@@ -174,45 +191,223 @@ async function fetchUserDailyData(accessToken: string, date: string) {
 
 /**
  * Get all users who have connected their Polar accounts
- * TODO: Replace this with your actual database query
  */
 async function getUsersWithPolarTokens(): Promise<UserToken[]> {
-  // IMPLEMENTATION NEEDED: Query your database (Firebase, etc.) for users with Polar tokens
-  // For now, return empty array
-  // 
-  // Example implementation with Firebase:
-  // const snapshot = await getDocs(
-  //   query(collection(db, 'users'), where('polarAccessToken', '!=', null))
-  // );
-  // return snapshot.docs.map(doc => ({
-  //   userId: doc.id,
-  //   accessToken: doc.data().polarAccessToken,
-  //   polarUserId: doc.data().polarUserId,
-  // }));
-  
-  console.log('⚠️  getUsersWithPolarTokens not implemented - returning empty array');
-  return [];
+  try {
+    const usersSnapshot = await db.collection('users')
+      .where('polarAccessToken', '!=', null)
+      .get();
+    
+    const users: UserToken[] = [];
+    usersSnapshot.forEach(doc => {
+      const data = doc.data();
+      if (data.polarAccessToken) {
+        users.push({
+          userId: doc.id,
+          accessToken: data.polarAccessToken,
+          polarUserId: data.polarUserId,
+        });
+      }
+    });
+    
+    console.log(`📋 Found ${users.length} users with Polar tokens`);
+    return users;
+  } catch (error: any) {
+    console.error('❌ Error fetching users with Polar tokens:', error.message);
+    return [];
+  }
 }
 
 /**
  * Process and store the fetched user data
- * TODO: Implement based on your storage requirements
  */
 async function processUserData(userId: string, date: string, data: any) {
-  // IMPLEMENTATION NEEDED: Store the fetched data in your database
-  // You might want to:
-  // 1. Store activities in a 'dailyActivities' collection
-  // 2. Store exercises in a 'workouts' collection
-  // 3. Store nightly recharge in a 'sleepData' collection
-  // 4. Update user stats/achievements
-  // 5. Trigger any game logic (XP, creature unlocks, etc.)
+  const batch = db.batch();
+  let totalXpEarned = 0;
+  const unlockedCreatures: string[] = [];
   
-  console.log('⚠️  processUserData not implemented - data not stored');
-  console.log('  Data summary:', {
-    userId,
-    date,
-    hasActivities: !!data.activities,
-    hasNightlyRecharge: !!data.nightlyRecharge,
-    exerciseCount: data.exercises?.length || 0,
-  });
+  try {
+    // 1. Store daily activities if present
+    if (data.activities) {
+      const activityRef = db.collection('users').doc(userId).collection('dailyActivities').doc(date);
+      batch.set(activityRef, {
+        date,
+        ...data.activities,
+        syncedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`  💾 Storing daily activities for ${date}`);
+    }
+    
+    // 2. Store nightly recharge/sleep data if present
+    if (data.nightlyRecharge) {
+      const sleepRef = db.collection('users').doc(userId).collection('sleepData').doc(date);
+      batch.set(sleepRef, {
+        date,
+        ...data.nightlyRecharge,
+        syncedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      console.log(`  💤 Storing sleep data for ${date}`);
+    }
+    
+    // 3. Process and store each exercise/workout with game logic
+    if (data.exercises && Array.isArray(data.exercises)) {
+      const userDoc = await db.collection('users').doc(userId).get();
+      const userData = userDoc.data() || {};
+      const currentXp = userData.xp || 0;
+      const currentLevel = userData.level || 1;
+      const capturedCreatures = userData.capturedCreatures || [];
+      
+      for (const exercise of data.exercises) {
+        // Store the workout
+        const workoutRef = db.collection('users').doc(userId).collection('workouts').doc();
+        const workoutData = {
+          ...exercise,
+          date,
+          syncedAt: admin.firestore.FieldValue.serverTimestamp(),
+          source: 'polar-cron',
+        };
+        batch.set(workoutRef, workoutData);
+        
+        // Calculate XP for this workout
+        const xp = calculateWorkoutXP(exercise);
+        totalXpEarned += xp;
+        
+        // Check for creature unlocks
+        const newCreatures = await checkCreatureUnlocks(exercise, capturedCreatures);
+        unlockedCreatures.push(...newCreatures);
+        
+        console.log(`  🏋️ Workout processed: ${xp} XP earned`);
+      }
+      
+      // 4. Update user profile with accumulated stats and XP
+      const newTotalXp = currentXp + totalXpEarned;
+      const newLevel = calculateLevel(newTotalXp);
+      const leveledUp = newLevel > currentLevel;
+      
+      const userRef = db.collection('users').doc(userId);
+      batch.update(userRef, {
+        xp: newTotalXp,
+        level: newLevel,
+        totalWorkouts: admin.firestore.FieldValue.increment(data.exercises?.length || 0),
+        ...(unlockedCreatures.length > 0 && {
+          capturedCreatures: admin.firestore.FieldValue.arrayUnion(...unlockedCreatures),
+        }),
+        lastSyncedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      
+      console.log(`  🎮 User stats updated: ${totalXpEarned} XP earned${leveledUp ? ` (Level ${currentLevel} → ${newLevel}!)` : ''}`);
+      if (unlockedCreatures.length > 0) {
+        console.log(`  🎉 New creatures unlocked: ${unlockedCreatures.join(', ')}`);
+      }
+    }
+    
+    // Commit all changes in a batch
+    await batch.commit();
+    console.log(`  ✅ All data committed to Firestore`);
+    
+  } catch (error: any) {
+    console.error(`  ❌ Error processing user data:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Calculate XP earned from a workout using the same formula as the app
+ */
+function calculateWorkoutXP(exercise: any): number {
+  const calories = exercise.calories || 0;
+  const durationMinutes = parseDuration(exercise.duration || 'PT0M');
+  const avgHeartRate = exercise['heart-rate']?.average || exercise.heartRate?.average || 0;
+  
+  const caloriePoints = calories * 0.1;
+  const durationPoints = durationMinutes * 0.5;
+  const heartRateBonus = avgHeartRate > 140 ? 10 : 0;
+  
+  return Math.floor(caloriePoints + durationPoints + heartRateBonus);
+}
+
+/**
+ * Calculate user level from total XP using power curve formula
+ */
+function calculateLevel(xp: number): number {
+  if (xp < 100) return 1;
+  
+  let level = 1;
+  while (true) {
+    const nextLevelXP = getXPForLevel(level + 1);
+    if (xp >= nextLevelXP) {
+      level++;
+    } else {
+      break;
+    }
+  }
+  
+  return level;
+}
+
+function getXPForLevel(level: number): number {
+  if (level <= 1) return 0;
+  
+  let totalXP = 0;
+  for (let lvl = 1; lvl < level; lvl++) {
+    totalXP += Math.round(80 * Math.pow(lvl, 1.3) + 150);
+  }
+  
+  return totalXP;
+}
+
+/**
+ * Check if workout unlocks any new creatures
+ */
+async function checkCreatureUnlocks(exercise: any, alreadyCaptured: string[]): Promise<string[]> {
+  try {
+    const calories = exercise.calories || 0;
+    const durationMinutes = parseDuration(exercise.duration || 'PT0M');
+    const distance = exercise.distance || 0;
+    const avgHeartRate = exercise['heart-rate']?.average || exercise.heartRate?.average || 0;
+    const sport = exercise.sport || 'OTHER';
+    
+    // Query creatures that aren't captured yet
+    const creaturesSnapshot = await db.collection('creatures').get();
+    const unlockedIds: string[] = [];
+    
+    creaturesSnapshot.forEach(doc => {
+      const creature = doc.data();
+      const creatureId = doc.id;
+      
+      // Skip if already captured
+      if (alreadyCaptured.includes(creatureId)) return;
+      
+      const req = creature.requiredWorkout || {};
+      
+      // Check all requirements
+      if (req.minCalories && calories < req.minCalories) return;
+      if (req.minDistance && distance < req.minDistance) return;
+      if (req.minHeartRate && avgHeartRate < req.minHeartRate) return;
+      if (req.minDuration && durationMinutes < req.minDuration) return;
+      if (req.sport && sport !== req.sport) return;
+      
+      // All requirements met!
+      unlockedIds.push(creatureId);
+    });
+    
+    return unlockedIds;
+  } catch (error: any) {
+    console.error('  ⚠️  Error checking creature unlocks:', error.message);
+    return [];
+  }
+}
+
+/**
+ * Parse ISO 8601 duration to minutes
+ */
+function parseDuration(isoDuration: string): number {
+  const matches = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!matches) return 0;
+  
+  const hours = parseInt(matches[1] || '0');
+  const minutes = parseInt(matches[2] || '0');
+  const seconds = parseInt(matches[3] || '0');
+  
+  return hours * 60 + minutes + Math.floor(seconds / 60);
 }
