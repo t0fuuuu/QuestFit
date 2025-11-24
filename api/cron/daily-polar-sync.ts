@@ -129,59 +129,60 @@ async function fetchUserDailyData(accessToken: string, date: string) {
 
   const result: any = { date, exercises: [] };
 
-  // Fetch ALL activities (not filtered by date)
+  // Fetch activities using transaction-based pull API
   try {
-    const activitiesResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/activities`,
+    // Step 1: Create a transaction
+    const transactionResponse = await axios.post(
+      `${POLAR_BASE_URL}/users/exercise-transactions`,
+      {},
       { headers }
     );
     
-    const activities = activitiesResponse.data;
-    console.log(`  ✓ Fetched ${activities.length || 0} total activities from Polar`);
+    const transactionId = transactionResponse.data?.['transaction-id'] || transactionResponse.data?.transaction_id;
+    console.log(`  ✓ Created transaction: ${transactionId}`);
     
-    // Filter activities to only today's date
-    if (Array.isArray(activities)) {
-      const todaysActivities = activities.filter((activity: any) => {
-        const activityDate = activity.date || activity['start-time']?.split('T')[0];
-        return activityDate === date;
-      });
-      
-      console.log(`  📅 Found ${todaysActivities.length} activities for ${date}`);
-      result.activities = todaysActivities;
-      
-      // Extract exercise IDs from today's activities
-      const exerciseIds: string[] = [];
-      todaysActivities.forEach((activity: any) => {
-        if (activity.id) {
-          exerciseIds.push(activity.id);
+    if (!transactionId) {
+      throw new Error('No transaction ID returned');
+    }
+    
+    // Step 2: List available exercises in the transaction
+    const exercisesListResponse = await axios.get(
+      `${POLAR_BASE_URL}/users/exercise-transactions/${transactionId}`,
+      { headers }
+    );
+    
+    const exerciseUrls = exercisesListResponse.data?.exercises || [];
+    console.log(`  ✓ Found ${exerciseUrls.length} exercises in transaction`);
+    
+    // Step 3: Fetch each exercise's detailed data
+    for (const exerciseUrl of exerciseUrls) {
+      try {
+        const exerciseResponse = await axios.get(exerciseUrl, { headers });
+        const exercise = exerciseResponse.data;
+        
+        // Check if this exercise is from today
+        const exerciseDate = exercise['start-time']?.split('T')[0] || exercise.start_time?.split('T')[0];
+        if (exerciseDate === date) {
+          result.exercises.push(exercise);
+          console.log(`  ✓ Exercise ${exercise.id} from ${exerciseDate} fetched`);
+        } else {
+          console.log(`  ⏭️  Skipping exercise from ${exerciseDate} (not today)`);
         }
-      });
-      
-      // Fetch detailed data for each exercise
-      if (exerciseIds.length > 0) {
-        console.log(`  🏋️ Fetching ${exerciseIds.length} exercise details...`);
-        for (const exerciseId of exerciseIds) {
-          try {
-            const exerciseResponse = await axios.get(
-              `${POLAR_BASE_URL}/exercises/${exerciseId}`,
-              { headers }
-            );
-            result.exercises.push(exerciseResponse.data);
-            console.log(`  ✓ Exercise ${exerciseId} fetched`);
-          } catch (error: any) {
-            console.error(`  ✗ Exercise ${exerciseId} error:`, error.message);
-            result.exerciseErrors = result.exerciseErrors || [];
-            result.exerciseErrors.push({
-              exerciseId,
-              error: error.message,
-            });
-          }
-        }
+      } catch (error: any) {
+        console.error(`  ✗ Exercise fetch error:`, error.message);
       }
     }
+    
+    // Step 4: Commit the transaction
+    await axios.delete(
+      `${POLAR_BASE_URL}/users/exercise-transactions/${transactionId}`,
+      { headers }
+    );
+    console.log(`  ✓ Transaction ${transactionId} committed`);
+    
   } catch (error: any) {
-    console.error(`  ✗ Activities error:`, error.message);
-    result.activitiesError = error.message;
+    console.error(`  ✗ Transaction error:`, error.message);
+    result.transactionError = error.message;
   }
 
   // Fetch nightly recharge for the specific date
