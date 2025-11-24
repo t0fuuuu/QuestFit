@@ -135,7 +135,7 @@ class GameService {
     const userProfile = await this.getUserProfile(userId);
     if (userProfile) {
       const newXP = userProfile.xp + experience;
-      const newLevel = calculateLevel(newXP); // using fibonacci sequence for leveling now
+      const newLevel = calculateLevel(newXP); // using eqn for leveling now
       
       await this.updateUserProfile(userId, { 
         xp: newXP, 

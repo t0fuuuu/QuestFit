@@ -1,9 +1,24 @@
-# System Architecture: Creature Unlock & XP Flow
+# QuestFit System Architecture
+
+## Overview
+QuestFit is a gamified fitness application built with React Native and Expo, combining real-time workout tracking with RPG-style progression mechanics. The system integrates with Polar devices for fitness tracking and uses Firebase for backend services.
+
+## Technology Stack
+- **Frontend**: React Native 0.81.5, Expo 54, Expo Router 6
+- **Backend**: Firebase (Firestore, Authentication)
+- **APIs**: Vercel Serverless Functions
+- **Device Integration**: Polar Bluetooth API, react-native-ble-plx
+- **State Management**: React Hooks, Firebase Real-time Listeners
+- **Language**: TypeScript 5.9
+
+---
+
+# Core Architecture: Creature Unlock & XP Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                        USER COMPLETES WORKOUT                       │
-│                     (Live Workout or Polar Sync)                    │
+│              (Live Workout, Multi-Device, or Polar Sync)            │
 └───────────────────────────────┬─────────────────────────────────────┘
                                 │
                                 ▼
@@ -133,13 +148,24 @@ OUTPUT:
 
 ## Component Interaction
 
+### Main App Screens
+
 ```
-app/(tabs)/live.tsx
+app/(tabs)/Home.tsx (Main Dashboard)
+    │
+    ├─► useAuth() - Authentication state
+    ├─► useGameProfile() - User stats and progress
+    └─► Display overview and quick actions
+
+app/(tabs)/workout.tsx (Live Workout Tracking)
     │
     │ User clicks "End Workout"
     │
     ├─► useLiveWorkout()
     │       └─► Returns workout metrics
+    │
+    ├─► useMultiDeviceWorkout() [NEW]
+    │       └─► Tracks multiple Polar devices simultaneously
     │
     ├─► workoutCompletionService.completeLiveWorkout()
     │       │
@@ -153,8 +179,21 @@ app/(tabs)/live.tsx
     │
     └─► Display workout summary
 
+app/(tabs)/creatures.tsx (Creature Collection)
+    │
+    ├─► useAuth() - Get current user
+    │
+    ├─► useGameProfile(userId)
+    │       └─► Load captured creatures
+    │
+    ├─► creatureService.getAllCreatures()
+    │       └─► Load all available creatures
+    │
+    └─► Display creatures with captured status
+            ├─► Show unlock requirements
+            └─► Highlight captured ones
 
-app/(tabs)/xp.tsx
+app/(tabs)/me.tsx (Profile & Stats)
     │
     ├─► useAuth() - Get current user
     │
@@ -169,20 +208,12 @@ app/(tabs)/xp.tsx
     │
     └─► Auto-refreshes when Firebase updates
 
-
-app/(tabs)/creature.tsx
+app/(tabs)/instr-dashboard.tsx (Instructor Dashboard)
     │
-    ├─► useAuth() - Get current user
-    │
-    ├─► useGameProfile(userId)
-    │       └─► Load captured creatures
-    │
-    ├─► creatureService.getAllCreatures()
-    │       └─► Load all available creatures
-    │
-    └─► Display creatures with captured status
-            ├─► Show unlock requirements
-            └─► Highlight captured ones
+    ├─► useAuth() - Check instructor role
+    ├─► useMultiDeviceWorkout()
+    │       └─► Monitor multiple participants
+    └─► Display real-time group metrics
 ```
 
 ---
@@ -221,32 +252,53 @@ app/(tabs)/creature.tsx
 ## File Dependencies
 
 ```
-data/creatures.json
+data/creatures.json & data/creatures.csv
     ↓ loaded by
 src/services/creatureService.ts
     ↓ used by
 src/services/workoutCompletionService.ts
     ↓ used by
-app/(tabs)/live.tsx
+app/(tabs)/workout.tsx
     ↓ displays
 components/game/CreatureUnlockModal.tsx
 
 
 src/types/polar.ts
     ↓ defines types for
-src/utils/workoutProcessor.ts
+src/utils/workoutProcessor.ts & src/utils/polarIntegration.ts
     ↓ used by
 src/services/workoutCompletionService.ts
 
 
+src/services/bluetoothService.ts
+    ↓ provides BLE connection to
+src/hooks/useLiveWorkout.ts & src/hooks/useMultiDeviceWorkout.ts
+    ↓ used by
+app/(tabs)/workout.tsx & app/(tabs)/instr-dashboard.tsx
+
+
 src/services/firebase.ts
     ↓ provides db connection to
-src/services/gameService.ts
+src/services/gameService.ts & src/hooks/useAuth.ts
     ↓ used by
 src/hooks/useGameProfile.ts
     ↓ used by
-app/(tabs)/xp.tsx
-app/(tabs)/creature.tsx
+app/(tabs)/me.tsx
+app/(tabs)/creatures.tsx
+app/(tabs)/Home.tsx
+
+
+api/polar/*.ts (Vercel Serverless Functions)
+    ├─ register-user.ts → Polar OAuth registration
+    ├─ webhook.ts → Receives workout sync from Polar
+    ├─ user-data.ts → Fetches user data from Polar
+    ├─ create-webhook.ts → Sets up Polar webhooks
+    ├─ delete-webhook.ts → Removes Polar webhooks
+    └─ disconnect-user.ts → Disconnects Polar account
+    
+api/cron/daily-polar-sync.ts
+    ↓ scheduled sync
+    └─ Fetches daily workout data from Polar API
 ```
 
 ---
@@ -321,9 +373,108 @@ Workout Completion
 
 ---
 
+## API Architecture (Vercel Serverless Functions)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Polar Cloud API                         │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Vercel Serverless Functions                    │
+│              (api/polar/*.ts)                               │
+├─────────────────────────────────────────────────────────────┤
+│  • OAuth Flow (register-user.ts)                            │
+│  • Webhook Handler (webhook.ts)                             │
+│  • User Data Fetch (user-data.ts)                           │
+│  • Webhook Management (create/delete-webhook.ts)            │
+│  • Account Disconnect (disconnect-user.ts)                  │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Firebase Firestore                        │
+│                 (Data Persistence)                          │
+├─────────────────────────────────────────────────────────────┤
+│  • Stores Polar access tokens                               │
+│  • Saves synced workout data                                │
+│  • Links Polar user_id with Firebase uid                    │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Mobile App (React Native)                      │
+│            Displays synced workout data                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Cron Job Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│         Vercel Cron Job (api/cron/daily-polar-sync.ts)     │
+│                  Runs: Daily at 2 AM UTC                    │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ├─► For each user with Polar connected:
+                     │   ├─ Fetch workouts from last 24h
+                     │   ├─ Process workout data
+                     │   ├─ Calculate XP and unlocks
+                     │   └─ Update Firebase
+                     │
+                     └─► Error handling & logging
+```
+
+---
+
+## Multi-Device Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│           Instructor Dashboard (instr-dashboard.tsx)        │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│         useMultiDeviceWorkout Hook                          │
+│         (src/hooks/useMultiDeviceWorkout.ts)                │
+├─────────────────────────────────────────────────────────────┤
+│  • Manages multiple Bluetooth connections                   │
+│  • Tracks heart rates from each device                      │
+│  • Aggregates real-time metrics                             │
+│  • Maintains device state (connected/disconnected)          │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+        ┌────────────┴────────────┐
+        │                         │
+        ▼                         ▼
+┌────────────────┐      ┌────────────────┐
+│  Polar Watch 1 │      │  Polar Watch 2 │
+│  (Bluetooth)   │      │  (Bluetooth)   │
+└────────────────┘      └────────────────┘
+        │                         │
+        └────────────┬────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│         Real-time Display & Analytics                       │
+│  • Individual heart rates                                   │
+│  • Group average HR                                         │
+│  • Active participants count                                │
+│  • Workout duration & calories                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
 This architecture ensures:
 - 🔒 Data consistency (Firebase as single source of truth)
-- ⚡ Real-time updates (Firebase sync)
+- ⚡ Real-time updates (Firebase sync + Bluetooth streaming)
 - 🎨 Clean separation of concerns (services, hooks, components)
 - 🧪 Easy testing (mock data available)
-- 📈 Scalability (modular design)
+- 📈 Scalability (modular design + serverless functions)
+- 🌐 Web deployment (Vercel integration)
+- 👥 Multi-user support (Multi-device tracking)
+- 🔄 Background sync (Cron jobs for Polar data)
