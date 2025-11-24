@@ -1,0 +1,46 @@
+{
+  "activities": [
+    "steps",
+    "inactivity_alert_count",
+    "start_time",
+    "end_time",
+    "calories",
+    "active_calories",
+    "active_duration",
+    "inactive_duration"
+  ],
+  "continuousHeartRate": [
+    "date",
+    "heart_rate_samples"
+  ],
+  "exercises": [
+    "id",
+    "start_time",
+    "duration",
+    "calories",
+    "distance",
+    "heart_rate",
+    "training_load_pro",
+    "sport"
+  ],
+  "cardioLoad": [
+    "cardio_load_ratio",
+    "cardio_load_level"
+  ],
+  "sleep": [
+    "sleep_start_time",
+    "sleep_end_time",
+    "continuity_class",
+    "light_sleep",
+    "deep_sleep",
+    "rem_sleep",
+    "unrecognized_sleep_stage",
+    "sleep_score",
+    "sleep_rating",
+    "sleep_cycles"
+  ],
+  "nightlyRecharge": [
+    "heart_rate_avg",
+    "ans_charge_status"
+  ]
+}

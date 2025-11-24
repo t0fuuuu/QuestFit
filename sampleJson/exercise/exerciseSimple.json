@@ -1,0 +1,94 @@
+[
+  {
+    "id": "ymrMqJ6r",
+    "upload_time": "2025-11-20T06:32:34Z",
+    "polar_user": "https://www.polaraccesslink.com/v3/users/62785259",
+    "device": "Polar Pacer",
+    "device_id": "E5C6EC25",
+    "start_time": "2025-11-20T14:31:27",
+    "start_time_utc_offset": 480,
+    "duration": "PT9.033S",
+    "heart_rate": {
+      "average": 69,
+      "maximum": 72
+    },
+    "sport": "OTHER",
+    "has_route": false,
+    "detailed_sport_info": "CIRCUIT_TRAINING",
+    "calories": 0,
+    "fat_percentage": 0,
+    "carbohydrate_percentage": 100,
+    "protein_percentage": 0,
+    "training_load_pro": {
+      "cardio-load": 0.0111767,
+      "cardio-load-interpretation": "VERY_LOW",
+      "muscle-load": -1.0,
+      "muscle-load-interpretation": "NOT_AVAILABLE",
+      "perceived-load": 0.0,
+      "perceived-load-interpretation": "NOT_AVAILABLE",
+      "user-rpe": "UNKNOWN"
+    }
+  },
+  {
+    "id": "5lw6kr4L",
+    "upload_time": "2025-11-21T08:58:04Z",
+    "polar_user": "https://www.polaraccesslink.com/v3/users/62785259",
+    "device": "Polar Pacer",
+    "device_id": "E5C6EC25",
+    "start_time": "2025-11-21T07:22:06",
+    "start_time_utc_offset": 480,
+    "duration": "PT1087.032S",
+    "distance": 3321.0,
+    "heart_rate": {
+      "average": 170,
+      "maximum": 192
+    },
+    "sport": "RUNNING",
+    "has_route": true,
+    "detailed_sport_info": "RUNNING",
+    "calories": 182,
+    "running_index": 44,
+    "fat_percentage": 15,
+    "carbohydrate_percentage": 84,
+    "protein_percentage": 1,
+    "training_load_pro": {
+      "cardio-load": 41.792,
+      "cardio-load-interpretation": "HIGH",
+      "muscle-load": -1.0,
+      "muscle-load-interpretation": "NOT_AVAILABLE",
+      "perceived-load": 0.0,
+      "perceived-load-interpretation": "NOT_AVAILABLE",
+      "user-rpe": "UNKNOWN"
+    }
+  },
+  {
+    "id": "5A2j9koz",
+    "upload_time": "2025-11-24T10:20:47Z",
+    "polar_user": "https://www.polaraccesslink.com/v3/users/62785259",
+    "device": "Polar Pacer",
+    "device_id": "E5C6EC25",
+    "start_time": "2025-11-24T18:19:15",
+    "start_time_utc_offset": 480,
+    "duration": "PT56.156S",
+    "heart_rate": {
+      "average": 69,
+      "maximum": 79
+    },
+    "sport": "OTHER",
+    "has_route": false,
+    "detailed_sport_info": "CIRCUIT_TRAINING",
+    "calories": 1,
+    "fat_percentage": 80,
+    "carbohydrate_percentage": 20,
+    "protein_percentage": 0,
+    "training_load_pro": {
+      "cardio-load": 0.0724197,
+      "cardio-load-interpretation": "VERY_LOW",
+      "muscle-load": -1.0,
+      "muscle-load-interpretation": "NOT_AVAILABLE",
+      "perceived-load": 0.0,
+      "perceived-load-interpretation": "NOT_AVAILABLE",
+      "user-rpe": "UNKNOWN"
+    }
+  }
+]
