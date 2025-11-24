@@ -119,7 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Fetch daily data from Polar API for a specific user
+ * Fetch new activities from Polar API for a specific user
  */
 async function fetchUserDailyData(accessToken: string, date: string) {
   const headers = {
@@ -127,26 +127,64 @@ async function fetchUserDailyData(accessToken: string, date: string) {
     'Accept': 'application/json',
   };
 
-  const result: any = { date };
+  const result: any = { date, exercises: [] };
 
-  // Fetch activities
+  // Fetch ALL activities (not filtered by date)
   try {
     const activitiesResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/activities/${date}`,
+      `${POLAR_BASE_URL}/users/activities`,
       { headers }
     );
-    result.activities = activitiesResponse.data;
-    console.log(`  ✓ Activities fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Activities error:`, error.message);
-      result.activitiesError = error.message;
-    } else {
-      console.log(`  - No activities for ${date}`);
+    
+    const activities = activitiesResponse.data;
+    console.log(`  ✓ Fetched ${activities.length || 0} total activities from Polar`);
+    
+    // Filter activities to only today's date
+    if (Array.isArray(activities)) {
+      const todaysActivities = activities.filter((activity: any) => {
+        const activityDate = activity.date || activity['start-time']?.split('T')[0];
+        return activityDate === date;
+      });
+      
+      console.log(`  📅 Found ${todaysActivities.length} activities for ${date}`);
+      result.activities = todaysActivities;
+      
+      // Extract exercise IDs from today's activities
+      const exerciseIds: string[] = [];
+      todaysActivities.forEach((activity: any) => {
+        if (activity.id) {
+          exerciseIds.push(activity.id);
+        }
+      });
+      
+      // Fetch detailed data for each exercise
+      if (exerciseIds.length > 0) {
+        console.log(`  🏋️ Fetching ${exerciseIds.length} exercise details...`);
+        for (const exerciseId of exerciseIds) {
+          try {
+            const exerciseResponse = await axios.get(
+              `${POLAR_BASE_URL}/exercises/${exerciseId}`,
+              { headers }
+            );
+            result.exercises.push(exerciseResponse.data);
+            console.log(`  ✓ Exercise ${exerciseId} fetched`);
+          } catch (error: any) {
+            console.error(`  ✗ Exercise ${exerciseId} error:`, error.message);
+            result.exerciseErrors = result.exerciseErrors || [];
+            result.exerciseErrors.push({
+              exerciseId,
+              error: error.message,
+            });
+          }
+        }
+      }
     }
+  } catch (error: any) {
+    console.error(`  ✗ Activities error:`, error.message);
+    result.activitiesError = error.message;
   }
 
-  // Fetch nightly recharge
+  // Fetch nightly recharge for the specific date
   try {
     const rechargeResponse = await axios.get(
       `${POLAR_BASE_URL}/users/nightly-recharge/${date}`,
@@ -160,29 +198,6 @@ async function fetchUserDailyData(accessToken: string, date: string) {
       result.nightlyRechargeError = error.message;
     } else {
       console.log(`  - No nightly recharge for ${date}`);
-    }
-  }
-
-  // Fetch detailed exercise data if activities contain exercise references
-  if (result.activities?.exercises && Array.isArray(result.activities.exercises)) {
-    result.exercises = [];
-    for (const exerciseRef of result.activities.exercises) {
-      try {
-        const exerciseId = typeof exerciseRef === 'string' ? exerciseRef : exerciseRef.id;
-        const exerciseResponse = await axios.get(
-          `${POLAR_BASE_URL}/exercises/${exerciseId}`,
-          { headers }
-        );
-        result.exercises.push(exerciseResponse.data);
-        console.log(`  ✓ Exercise ${exerciseId} fetched`);
-      } catch (error: any) {
-        console.error(`  ✗ Exercise error:`, error.message);
-        result.exerciseErrors = result.exerciseErrors || [];
-        result.exerciseErrors.push({
-          exerciseId: exerciseRef,
-          error: error.message,
-        });
-      }
     }
   }
 
@@ -257,11 +272,33 @@ async function processUserData(userId: string, date: string, data: any) {
       const currentLevel = userData.level || 1;
       const capturedCreatures = userData.capturedCreatures || [];
       
+      // Get existing workout IDs to avoid duplicates
+      const existingWorkoutsSnapshot = await db.collection('users')
+        .doc(userId)
+        .collection('workouts')
+        .where('date', '==', date)
+        .get();
+      
+      const existingWorkoutIds = new Set(
+        existingWorkoutsSnapshot.docs.map(doc => doc.data().id || doc.data().polarId)
+      );
+      
+      console.log(`  📊 Found ${existingWorkoutsSnapshot.size} existing workouts for ${date}`);
+      
       for (const exercise of data.exercises) {
+        const exerciseId = exercise.id || exercise['polar-id'] || exercise.polarId;
+        
+        // Skip if we already have this workout
+        if (exerciseId && existingWorkoutIds.has(exerciseId)) {
+          console.log(`  ⏭️  Skipping duplicate workout ${exerciseId}`);
+          continue;
+        }
+        
         // Store the workout
         const workoutRef = db.collection('users').doc(userId).collection('workouts').doc();
         const workoutData = {
           ...exercise,
+          polarId: exerciseId,
           date,
           syncedAt: admin.firestore.FieldValue.serverTimestamp(),
           source: 'polar-cron',
@@ -276,7 +313,7 @@ async function processUserData(userId: string, date: string, data: any) {
         const newCreatures = await checkCreatureUnlocks(exercise, capturedCreatures);
         unlockedCreatures.push(...newCreatures);
         
-        console.log(`  🏋️ Workout processed: ${xp} XP earned`);
+        console.log(`  🏋️ New workout ${exerciseId}: ${xp} XP earned`);
       }
       
       // 4. Update user profile with accumulated stats and XP
