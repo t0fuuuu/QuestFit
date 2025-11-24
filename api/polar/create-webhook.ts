@@ -13,7 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const response = await axios.post(
       'https://www.polaraccesslink.com/v3/webhooks',
       {
-        events: ['EXERCISE', 'SLEEP', 'ACTIVITY_SUMMARY'],
+        events: ['EXERCISE', 'SLEEP', 'CONTINUOUS_HEART_RATE', 'ACTIVITY_SUMMARY'],
         url: 'https://questfit-pi.vercel.app/api/polar/webhook'
       },
       {
@@ -21,6 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           'Authorization': `Basic ${BASIC_AUTH}`,
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          
         },
       }
     );

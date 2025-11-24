@@ -99,7 +99,7 @@ class PolarOAuthService {
     // Don't encode the redirect_uri - Polar expects it unencoded
     const redirectUri = 'https://questfit-pi.vercel.app';
     // Request all available scopes including webhook management
-    const scope = ["EXERCISE", "SLEEP", "CONTINUOUS_HEART_RATE"];
+    const scope = "accesslink.read_all";
     const url = `${POLAR_AUTH_URL}?response_type=code&client_id=${POLAR_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${scope}`;
     
     return url;
