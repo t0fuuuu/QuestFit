@@ -1,0 +1,14 @@
+[
+  {
+    "id": "5A2j9koz",
+    "start_time": "2025-11-24T18:19:15",
+    "duration": "PT56.156S",
+    "calories": 1,
+    "heart_rate": { "average": 69, "maximum": 79 },
+    "training_load_pro": {
+      "cardio-load": 0.0724197,
+      "cardio-load-interpretation": "VERY_LOW"
+    },
+    "sport": "OTHER"
+  }
+]

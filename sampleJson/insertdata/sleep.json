@@ -1,0 +1,12 @@
+{
+  "sleep_start_time": "2025-11-18T22:26:06.018+08:00",
+  "sleep_end_time": "2025-11-19T05:15:36.018+08:00",
+  "continuity_class": 1,
+  "light_sleep": 15630,
+  "deep_sleep": 3090,
+  "rem_sleep": 1500,
+  "unrecognized_sleep_stage": 2370,
+  "sleep_score": 65,
+  "sleep_rating": 0,
+  "sleep_cycles": 4
+}

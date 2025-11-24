@@ -1,0 +1,8 @@
+{
+  "date": "2025-11-24",
+  "heart_rate_samples": [
+    { "heart_rate": 81, "sample_time": "05:19:50" },
+    { "heart_rate": 56, "sample_time": "15:54:14" },
+    { "heart_rate": 67, "sample_time": "18:19:11" }
+  ]
+}

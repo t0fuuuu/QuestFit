@@ -1,0 +1,12 @@
+[
+  {
+    "cardio_load_ratio": 2.71233,
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 14.193474,
+      "medium": 21.29021,
+      "high": 35.483685,
+      "very_high": 56.773895
+    }
+  }
+]
