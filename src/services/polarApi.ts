@@ -144,6 +144,94 @@ class PolarApiService {
     });
     return response.data;
   }
+
+  /**
+   * Get user activities for a specific date
+   * Endpoint: GET /v3/users/activities/{date}
+   * @param date - Date in format YYYY-MM-DD
+   */
+  async getActivities(date: string): Promise<any> {
+    const response = await axios.get(`${POLAR_BASE_URL}/users/activities/${date}`, {
+      headers: this.getHeaders(),
+    });
+    return response.data;
+  }
+
+  /**
+   * Get detailed exercise data
+   * Endpoint: GET /v3/exercises/{exerciseId}
+   * @param exerciseId - The ID of the exercise
+   */
+  async getExercise(exerciseId: string): Promise<any> {
+    const response = await axios.get(`${POLAR_BASE_URL}/exercises/${exerciseId}`, {
+      headers: this.getHeaders(),
+    });
+    return response.data;
+  }
+
+  /**
+   * Get nightly recharge data for a specific date
+   * Endpoint: GET /v3/users/nightly-recharge/{date}
+   * @param date - Date in format YYYY-MM-DD
+   */
+  async getNightlyRecharge(date: string): Promise<any> {
+    const response = await axios.get(`${POLAR_BASE_URL}/users/nightly-recharge/${date}`, {
+      headers: this.getHeaders(),
+    });
+    return response.data;
+  }
+
+  /**
+   * Fetch all available data for a user on a specific date
+   * This includes activities, exercises, and nightly recharge
+   * @param date - Date in format YYYY-MM-DD
+   */
+  async fetchDailyData(date: string): Promise<{
+    activities?: any;
+    exercises?: any[];
+    nightlyRecharge?: any;
+    errors?: string[];
+  }> {
+    const result: any = { errors: [] };
+
+    // Fetch activities
+    try {
+      result.activities = await this.getActivities(date);
+    } catch (error: any) {
+      console.error(`Error fetching activities for ${date}:`, error.message);
+      if (error.response?.status !== 404) {
+        result.errors.push(`activities: ${error.message}`);
+      }
+    }
+
+    // Fetch nightly recharge
+    try {
+      result.nightlyRecharge = await this.getNightlyRecharge(date);
+    } catch (error: any) {
+      console.error(`Error fetching nightly recharge for ${date}:`, error.message);
+      if (error.response?.status !== 404) {
+        result.errors.push(`nightlyRecharge: ${error.message}`);
+      }
+    }
+
+    // If activities contain exercise references, fetch detailed exercise data
+    if (result.activities?.exercises && Array.isArray(result.activities.exercises)) {
+      result.exercises = [];
+      for (const exerciseRef of result.activities.exercises) {
+        try {
+          const exerciseData = await this.getExercise(exerciseRef.id || exerciseRef);
+          result.exercises.push(exerciseData);
+        } catch (error: any) {
+          console.error(`Error fetching exercise ${exerciseRef.id || exerciseRef}:`, error.message);
+          if (error.response?.status !== 404) {
+            result.errors.push(`exercise ${exerciseRef.id}: ${error.message}`);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
 }
 
 export default new PolarApiService();
