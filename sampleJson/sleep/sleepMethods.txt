@@ -1,0 +1,5 @@
+sleep:
+curl -X GET https://www.polaraccesslink.com/v3/users/sleep/2025-11-19 -H "Accept: application/json" -H "Authorization: Bearer 47244ed52d043ed26fc5973e3eb55d6e"
+
+nightlyRecharge:
+curl -X GET https://www.polaraccesslink.com/v3/users/nightly-recharge/2025-11-19 -H "Accept: application/json" -H "Authorization: Bearer 47244ed52d043ed26fc5973e3eb55d6e"

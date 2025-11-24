@@ -1,0 +1,10 @@
+route
+curl -X GET https://www.polaraccesslink.com/v3/exercises/5lw6kr4L?route=true -H "Accept: application/json" -H "Authorization: Bearer 47244ed52d043ed26fc5973e3eb55d6e"
+
+samples
+curl -X GET https://www.polaraccesslink.com/v3/exercises/5lw6kr4L?samples=true -H "Accept: application/json" -H "Authorization: Bearer 47244ed52d043ed26fc5973e3eb55d6e"
+
+zones
+curl -X GET https://www.polaraccesslink.com/v3/exercises/5lw6kr4L?zones=true -H "Accept: application/json" -H "Authorization: Bearer 47244ed52d043ed26fc5973e3eb55d6e"
+
+Optional params can only be put in one at a time, need to combine json if want all 3

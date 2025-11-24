@@ -1,0 +1,63 @@
+
+[
+  {
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 13.774566,
+      "medium": 20.661848,
+      "high": 34.436413,
+      "very_high": 55.098263
+    },
+    "date": "2025-11-21",
+    "cardio_load_status": "PRODUCTIVE_DROPPED_FROM_OVERREACHING",
+    "cardio_load_ratio": 2.711849,
+    "cardio_load": 41.792,
+    "strain": 18.7678,
+    "tolerance": 6.9206657
+  },
+  {
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 14.193474,
+      "medium": 21.29021,
+      "high": 35.483685,
+      "very_high": 56.773895
+    },
+    "date": "2025-11-22",
+    "cardio_load_status": "PRODUCTIVE_DROPPED_FROM_OVERREACHING",
+    "cardio_load_ratio": 2.711849,
+    "cardio_load": 0,
+    "strain": 18.7678,
+    "tolerance": 6.9206657
+  },
+  {
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 14.193474,
+      "medium": 21.29021,
+      "high": 35.483685,
+      "very_high": 56.773895
+    },
+    "date": "2025-11-23",
+    "cardio_load_status": "PRODUCTIVE_DROPPED_FROM_OVERREACHING",
+    "cardio_load_ratio": 2.711849,
+    "cardio_load": 0,
+    "strain": 18.7678,
+    "tolerance": 6.9206657
+  },
+  {
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 14.193474,
+      "medium": 21.29021,
+      "high": 35.483685,
+      "very_high": 56.773895
+    },
+    "date": "2025-11-24",
+    "cardio_load_status": "PRODUCTIVE_DROPPED_FROM_OVERREACHING",
+    "cardio_load_ratio": 2.711849,
+    "cardio_load": 0,
+    "strain": 18.7678,
+    "tolerance": 6.9206657
+  }
+]

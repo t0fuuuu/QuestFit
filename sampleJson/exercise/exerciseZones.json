@@ -1,0 +1,64 @@
+{
+  "id": "5lw6kr4L",
+  "upload_time": "2025-11-21T08:58:04Z",
+  "polar_user": "https://www.polaraccesslink.com/v3/users/62785259",
+  "device": "Polar Pacer",
+  "device_id": "E5C6EC25",
+  "start_time": "2025-11-21T07:22:06",
+  "start_time_utc_offset": 480,
+  "duration": "PT1087.032S",
+  "distance": 3321.0,
+  "heart_rate": {
+    "average": 170,
+    "maximum": 192
+  },
+  "sport": "RUNNING",
+  "has_route": true,
+  "detailed_sport_info": "RUNNING",
+  "calories": 182,
+  "running_index": 44,
+  "fat_percentage": 15,
+  "carbohydrate_percentage": 84,
+  "protein_percentage": 1,
+  "heart_rate_zones": [
+    {
+      "index": 0,
+      "lower_limit": 101,
+      "upper_limit": 121,
+      "in_zone": "PT3S"
+    },
+    {
+      "index": 1,
+      "lower_limit": 121,
+      "upper_limit": 141,
+      "in_zone": "PT30S"
+    },
+    {
+      "index": 2,
+      "lower_limit": 141,
+      "upper_limit": 161,
+      "in_zone": "PT1M55S"
+    },
+    {
+      "index": 3,
+      "lower_limit": 161,
+      "upper_limit": 181,
+      "in_zone": "PT12M38S"
+    },
+    {
+      "index": 4,
+      "lower_limit": 181,
+      "upper_limit": 201,
+      "in_zone": "PT2M59S"
+    }
+  ],
+  "training_load_pro": {
+    "cardio-load": 41.792,
+    "cardio-load-interpretation": "HIGH",
+    "muscle-load": -1.0,
+    "muscle-load-interpretation": "NOT_AVAILABLE",
+    "perceived-load": 0.0,
+    "perceived-load-interpretation": "NOT_AVAILABLE",
+    "user-rpe": "UNKNOWN"
+  }
+}
