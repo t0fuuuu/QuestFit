@@ -1,390 +1,493 @@
-import React, { useEffect } from 'react';
-import { ScrollView, Pressable, ActivityIndicator, Alert, FlatList } from 'react-native';
-import { Text, View } from '@/components/Themed';
-import { useMultiDeviceWorkout } from '@/src/hooks/useMultiDeviceWorkout';
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { Device } from 'react-native-ble-plx';
-import { liveStyles as styles } from '@/src/styles';
-import { DeviceHeartRateCard } from '@/components/fitness/DeviceHeartRateCard';
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  View,
+  TextInput,
+  ScrollView,
+  Pressable,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { Text } from '@/components/Themed';
+import { useAuth } from '@/src/hooks/useAuth';
+import { useInstructor } from '@/src/hooks/useInstructor';
+import { useInstructorStudents } from '@/src/hooks/useInstructorStudents';
+import { db } from '@/src/services/firebase';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { router } from 'expo-router';
 
-export default function MultiDeviceLiveWorkoutScreen() {
-  const colorScheme = useColorScheme();
-  const {
-    isScanning,
-    availableDevices,
-    connectedDevices,
-    deviceHeartRates,
-    workoutActive,
-    workoutPaused,
-    pauseReason,
-    countdown,
-    workoutMetrics,
-    error,
-    bluetoothEnabled,
-    scanForDevices,
-    connectToDevice,
-    disconnectDevice,
-    disconnectAll,
-    startWorkout,
-    pauseWorkout,
-    resumeWorkout,
-    endWorkout,
-    checkBluetoothStatus,
-  } = useMultiDeviceWorkout();
+interface UserOverview {
+  userId: string;
+  lastSync?: string;
+  todayActivity?: {
+    steps?: number;
+    calories?: number;
+    distance?: number;
+  };
+  todayCardioLoad?: number;
+  todaySleep?: {
+    duration?: string;
+    quality?: number;
+  };
+  todayExercises?: number;
+}
+
+export default function InstructorDashboard() {
+  const { user } = useAuth();
+  const { isInstructor, loading: instructorLoading } = useInstructor(user?.uid);
+  const { selectedUserIds, loading: studentsLoading, toggleUser } = useInstructorStudents(user?.uid);
+  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [allUsers, setAllUsers] = useState<string[]>([]);
+  const [userOverviews, setUserOverviews] = useState<Map<string, UserOverview>>(new Map());
+  const [loadingOverviews, setLoadingOverviews] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showUserSelection, setShowUserSelection] = useState(false);
 
   useEffect(() => {
-    checkBluetoothStatus();
-  }, []);
-
-  const handleScan = async () => {
-    if (!bluetoothEnabled) {
-      Alert.alert('Bluetooth Disabled', 'Please enable Bluetooth to scan for devices.');
-      return;
+    if (isInstructor) {
+      loadAllUsers();
     }
-    await scanForDevices();
-  };
+  }, [isInstructor]);
 
-  const handleConnect = async (device: Device) => {
+  useEffect(() => {
+    if (selectedUserIds.length > 0) {
+      loadUserOverviews();
+    }
+  }, [selectedUserIds]);
+
+  const loadAllUsers = async () => {
     try {
-      await connectToDevice(device);
-      Alert.alert('Connected', `Connected to ${device.name || device.id}`);
-    } catch (err) {
-      Alert.alert('Connection Failed', 'Could not connect to device. Please try again.');
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      const userIds = usersSnapshot.docs.map(doc => doc.id);
+      setAllUsers(userIds);
+    } catch (error) {
+      console.error('Error loading users:', error);
     }
   };
 
-  const handleDisconnectDevice = async (deviceId: string, deviceName?: string) => {
-    Alert.alert(
-      'Disconnect',
-      `Disconnect from ${deviceName || 'this device'}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Disconnect',
-          style: 'destructive',
-          onPress: async () => {
-            await disconnectDevice(deviceId);
-          },
-        },
-      ]
-    );
-  };
+  const loadUserOverviews = async () => {
+    setLoadingOverviews(true);
+    const today = new Date().toISOString().split('T')[0];
+    const overviews = new Map<string, UserOverview>();
 
-  const handleDisconnectAll = async () => {
-    Alert.alert(
-      'Disconnect All',
-      'Are you sure you want to disconnect all devices?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Disconnect All',
-          style: 'destructive',
-          onPress: async () => {
-            await disconnectAll();
-            Alert.alert('Disconnected', 'All devices disconnected successfully');
-          },
-        },
-      ]
-    );
-  };
+    for (const userId of selectedUserIds) {
+      try {
+        const overview: UserOverview = { userId };
 
-  const handleStartWorkout = () => {
-    startWorkout();
-  };
+        // Get summary
+        const summaryDoc = await getDoc(
+          doc(db, `users/${userId}/polarData/syncSummary/all/${today}`)
+        );
+        if (summaryDoc.exists()) {
+          overview.lastSync = summaryDoc.data()?.syncedAt;
+        }
 
-  const handleEndWorkout = () => {
-    Alert.alert(
-      'End Workout',
-      'Are you sure you want to end this workout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End Workout',
-          style: 'destructive',
-          onPress: () => {
-            const metrics = endWorkout();
-            if (metrics) {
-              Alert.alert(
-                'Workout Complete!',
-                `Duration: ${Math.floor(metrics.duration / 60)}m ${metrics.duration % 60}s\n` +
-                `Avg HR: ${metrics.averageHeartRate} bpm\n` +
-                `Max HR: ${metrics.maxHeartRate} bpm\n` +
-                `Calories: ${metrics.caloriesBurned} kcal`
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
+        // Get activity
+        const activityDoc = await getDoc(
+          doc(db, `users/${userId}/polarData/activities/all/${today}`)
+        );
+        if (activityDoc.exists()) {
+          const data = activityDoc.data();
+          overview.todayActivity = {
+            steps: data?.steps,
+            calories: data?.calories,
+            distance: data?.distance_from_steps,
+          };
+        }
 
-  const getHeartRateZoneColor = (zone: number): string => {
-    switch (zone) {
-      case 1: return '#60A5FA'; // Light blue
-      case 2: return '#34D399'; // Green
-      case 3: return '#FBBF24'; // Yellow
-      case 4: return '#F97316'; // Orange
-      case 5: return '#EF4444'; // Red
-      default: return '#9CA3AF'; // Gray
+        // Get cardio load
+        const cardioDoc = await getDoc(
+          doc(db, `users/${userId}/polarData/cardioLoad/all/${today}`)
+        );
+        if (cardioDoc.exists()) {
+          overview.todayCardioLoad = cardioDoc.data()?.data?.cardio_load_ratio;
+        }
+
+        // Get sleep
+        const sleepDoc = await getDoc(
+          doc(db, `users/${userId}/polarData/sleep/all/${today}`)
+        );
+        if (sleepDoc.exists()) {
+          const data = sleepDoc.data();
+          overview.todaySleep = {
+            duration: data?.sleep_time,
+            quality: data?.sleep_score,
+          };
+        }
+
+        // Get exercises
+        const exercisesDoc = await getDoc(
+          doc(db, `users/${userId}/polarData/exercises/all/${today}`)
+        );
+        if (exercisesDoc.exists()) {
+          overview.todayExercises = exercisesDoc.data()?.count || 0;
+        }
+
+        overviews.set(userId, overview);
+      } catch (error) {
+        console.error(`Error loading overview for ${userId}:`, error);
+      }
     }
+
+    setUserOverviews(overviews);
+    setLoadingOverviews(false);
   };
 
-  const renderDevice = ({ item }: { item: Device }) => (
-    <Pressable
-      style={styles.deviceItem}
-      onPress={() => handleConnect(item)}
-    >
-      <View style={styles.deviceInfo}>
-        <Text style={styles.deviceName}>{item.name || 'Unknown Device'}</Text>
-        <Text style={styles.deviceId}>{item.id}</Text>
-      </View>
-      <Text style={styles.connectText}>Connect →</Text>
-    </Pressable>
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadUserOverviews();
+    setRefreshing(false);
+  };
+
+  const filteredUsers = allUsers.filter(userId =>
+    userId.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Calculate aggregate heart rate from all devices
-  const aggregateHeartRate = connectedDevices.length > 0 
-    ? (() => {
-        const validHRs = Array.from(deviceHeartRates.values()).filter((hr): hr is number => hr !== null && hr > 0);
-        if (validHRs.length === 0) return null;
-        return Math.round(validHRs.reduce((sum, hr) => sum + hr, 0) / validHRs.length);
-      })()
-    : null;
+  if (instructorLoading || studentsLoading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#FF6B35" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!isInstructor) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.title}>Access Denied</Text>
+        <Text style={styles.subtitle}>
+          This dashboard is only available for instructors.
+        </Text>
+      </View>
+    );
+  }
+
+  if (showUserSelection) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Select Users to Monitor</Text>
+          <Pressable
+            style={styles.doneButton}
+            onPress={() => setShowUserSelection(false)}
+          >
+            <Text style={styles.doneButtonText}>Done</Text>
+          </Pressable>
+        </View>
+
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search user ID..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholderTextColor="#999"
+        />
+
+        <ScrollView style={styles.userList}>
+          {filteredUsers.map(userId => (
+            <Pressable
+              key={userId}
+              style={[
+                styles.userItem,
+                selectedUserIds.includes(userId) && styles.userItemSelected,
+              ]}
+              onPress={() => toggleUser(userId)}
+            >
+              <Text style={styles.userIdText}>{userId}</Text>
+              {selectedUserIds.includes(userId) && (
+                <Text style={styles.checkmark}>✓</Text>
+              )}
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       <View style={styles.header}>
-        <Text style={styles.title}>Instructor's Dashboard</Text>
-        <Text style={styles.subtitle}>Connect multiple Polar watches for team tracking</Text>
-      </View>
-
-      {/* Error Display */}
-      {error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-        </View>
-      )}
-
-      {/* Connected Devices */}
-      {connectedDevices.length > 0 && (
-        <View style={styles.section}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>
-              Connected Devices ({connectedDevices.length})
-            </Text>
-            {connectedDevices.length > 1 && (
-              <Pressable onPress={handleDisconnectAll}>
-                <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '600' }}>
-                  Disconnect All
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          
-          {connectedDevices.map((deviceInfo) => (
-            <DeviceHeartRateCard
-              key={deviceInfo.device.id}
-              deviceInfo={deviceInfo}
-              heartRate={deviceHeartRates.get(deviceInfo.device.id) || null}
-              onDisconnect={() => handleDisconnectDevice(deviceInfo.device.id, deviceInfo.device.name || undefined)}
-              compact={connectedDevices.length > 2}
-            />
-          ))}
-
-          {/* Aggregate Heart Rate */}
-          {connectedDevices.length > 1 && (
-            <View style={[styles.heartRateSection, { marginTop: 12, backgroundColor: '#0F172A' }]}>
-              <Text style={styles.heartRateLabel}>Team Average Heart Rate</Text>
-              <View style={styles.heartRateDisplay}>
-                <Text style={styles.heartRateValue}>
-                  {aggregateHeartRate || '--'}
-                </Text>
-                <Text style={styles.heartRateUnit}>bpm</Text>
-                <Text style={styles.heartIcon}>👥❤️</Text>
-              </View>
-              {workoutMetrics && (
-                <View style={[styles.zoneIndicator, { backgroundColor: getHeartRateZoneColor(workoutMetrics.currentZone) }]}>
-                  <Text style={styles.zoneText}>Zone {workoutMetrics.currentZone}</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Connection Status */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add More Devices</Text>
-        
-        {!bluetoothEnabled && (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningText}>
-              📱 Bluetooth is disabled. Please enable it in your device settings.
-            </Text>
-          </View>
-        )}
-
+        <Text style={styles.title}>Instructor Dashboard</Text>
         <Pressable
-          style={[
-            styles.scanButton,
-            { backgroundColor: Colors[colorScheme ?? 'light'].tint },
-            isScanning && styles.scanButtonDisabled,
-          ]}
-          onPress={handleScan}
-          disabled={isScanning || !bluetoothEnabled}
+          style={styles.selectButton}
+          onPress={() => setShowUserSelection(true)}
         >
-          {isScanning ? (
-            <ActivityIndicator color="#000000ff" />
-          ) : (
-            <Text style={styles.scanButtonText}>
-              {availableDevices.length > 0 ? 'Scan Again' : 'Scan for Polar Devices'}
-            </Text>
-          )}
+          <Text style={styles.selectButtonText}>
+            {selectedUserIds.length > 0 ? 'Edit Users' : 'Select Users'}
+          </Text>
         </Pressable>
-
-        {availableDevices.length > 0 && (
-          <>
-            <Text style={styles.devicesFoundText}>
-              Found {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''}
-            </Text>
-            <FlatList
-              data={availableDevices.filter(d => !connectedDevices.find(cd => cd.device.id === d.id))}
-              renderItem={renderDevice}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ListEmptyComponent={
-                <Text style={{ color: '#94A3B8', textAlign: 'center', padding: 16 }}>
-                  All found devices are already connected
-                </Text>
-              }
-            />
-          </>
-        )}
       </View>
 
-      {/* Workout Controls */}
-      {connectedDevices.length > 0 && (
-        <View style={styles.section}>
-          {!workoutActive ? (
-            <>
+      {selectedUserIds.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyStateText}>
+            No users selected. Tap "Select Users" to start monitoring.
+          </Text>
+        </View>
+      ) : loadingOverviews ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#FF6B35" />
+          <Text style={styles.loadingText}>Loading user data...</Text>
+        </View>
+      ) : (
+        <View style={styles.overviewsContainer}>
+          {selectedUserIds.map(userId => {
+            const overview = userOverviews.get(userId);
+            return (
               <Pressable
-                style={[styles.workoutButton, styles.startButton]}
-                onPress={handleStartWorkout}
+                key={userId}
+                style={styles.userCard}
+                onPress={() => router.push(`/instructor/user-detail?userId=${userId}`)}
               >
-                <Text style={styles.workoutButtonText}>▶️ Start Workout</Text>
+                <View style={styles.userCardHeader}>
+                  <Text style={styles.userCardId}>{userId}</Text>
+                  {overview?.lastSync && (
+                    <Text style={styles.lastSync}>
+                      Last sync: {new Date(overview.lastSync).toLocaleTimeString()}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={styles.statsGrid}>
+                  {/* Activity Stats */}
+                  <View style={styles.statCard}>
+                    <Text style={styles.statLabel}>Activity</Text>
+                    {overview?.todayActivity ? (
+                      <>
+                        <Text style={styles.statValue}>
+                          {overview.todayActivity.steps?.toLocaleString() || 0} steps
+                        </Text>
+                        <Text style={styles.statSubValue}>
+                          {overview.todayActivity.calories || 0} cal
+                        </Text>
+                      </>
+                    ) : (
+                      <Text style={styles.noData}>No data</Text>
+                    )}
+                  </View>
+
+                  {/* Cardio Load */}
+                  <View style={styles.statCard}>
+                    <Text style={styles.statLabel}>Cardio Load</Text>
+                    {overview?.todayCardioLoad ? (
+                      <Text style={styles.statValue}>
+                        {overview.todayCardioLoad.toFixed(2)}
+                      </Text>
+                    ) : (
+                      <Text style={styles.noData}>No data</Text>
+                    )}
+                  </View>
+
+                  {/* Sleep */}
+                  <View style={styles.statCard}>
+                    <Text style={styles.statLabel}>Sleep</Text>
+                    {overview?.todaySleep ? (
+                      <>
+                        <Text style={styles.statValue}>
+                          {overview.todaySleep.duration || 'N/A'}
+                        </Text>
+                        {overview.todaySleep.quality && (
+                          <Text style={styles.statSubValue}>
+                            Score: {overview.todaySleep.quality}
+                          </Text>
+                        )}
+                      </>
+                    ) : (
+                      <Text style={styles.noData}>No data</Text>
+                    )}
+                  </View>
+
+                  {/* Exercises */}
+                  <View style={styles.statCard}>
+                    <Text style={styles.statLabel}>Exercises</Text>
+                    <Text style={styles.statValue}>
+                      {overview?.todayExercises || 0}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={styles.viewDetails}>Tap to view details →</Text>
               </Pressable>
-              <Text style={styles.autoStartHint}>
-                💡 Tip: Workout will auto-start when heart rate is detected
-              </Text>
-            </>
-          ) : (
-            <>
-              <View style={styles.buttonRow}>
-                {workoutPaused ? (
-                  <Pressable
-                    style={[styles.workoutButton, styles.resumeButton]}
-                    onPress={resumeWorkout}
-                  >
-                    <Text style={styles.workoutButtonText}>▶️ Resume</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    style={[styles.workoutButton, styles.pauseButton]}
-                    onPress={pauseWorkout}
-                  >
-                    <Text style={styles.workoutButtonText}>⏸️ Pause</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={[styles.workoutButton, styles.endButton]}
-                  onPress={handleEndWorkout}
-                >
-                  <Text style={styles.workoutButtonText}>⏹️ End</Text>
-                </Pressable>
-              </View>
-              {pauseReason && (
-                <Text style={styles.pauseReasonText}>{pauseReason}</Text>
-              )}
-            </>
-          )}
-        </View>
-      )}
-
-      {/* Workout Metrics */}
-      {workoutActive && workoutMetrics && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Workout Metrics</Text>
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>
-                {Math.floor(workoutMetrics.duration / 60)}:{(workoutMetrics.duration % 60).toString().padStart(2, '0')}
-              </Text>
-              <Text style={styles.metricLabel}>Duration</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.averageHeartRate}</Text>
-              <Text style={styles.metricLabel}>Avg HR</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.maxHeartRate}</Text>
-              <Text style={styles.metricLabel}>Max HR</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.caloriesBurned}</Text>
-              <Text style={styles.metricLabel}>Calories</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* Previous Workout Results */}
-      {!workoutActive && workoutMetrics && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Last Workout Summary</Text>
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryText}>
-              🏃 Duration: {Math.floor(workoutMetrics.duration / 60)} minutes {workoutMetrics.duration % 60} seconds
-            </Text>
-            <Text style={styles.summaryText}>
-              ❤️ Average HR: {workoutMetrics.averageHeartRate} bpm
-            </Text>
-            <Text style={styles.summaryText}>
-              📈 Max HR: {workoutMetrics.maxHeartRate} bpm
-            </Text>
-            <Text style={styles.summaryText}>
-              📉 Min HR: {workoutMetrics.minHeartRate} bpm
-            </Text>
-            <Text style={styles.summaryText}>
-              🔥 Calories Burned: {workoutMetrics.caloriesBurned} kcal
-            </Text>
-            <Text style={styles.summaryText}>
-              🎯 Peak Zone: Zone {workoutMetrics.currentZone}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Instructions */}
-      <View style={styles.section}>
-        <Text style={styles.instructionsTitle}>How to Use Multi-Device Mode:</Text>
-        <Text style={styles.instructionText}>1. Make sure all Polar watches are on and nearby</Text>
-        <Text style={styles.instructionText}>2. Tap "Scan for Polar Devices"</Text>
-        <Text style={styles.instructionText}>3. Connect to each device one by one</Text>
-        <Text style={styles.instructionText}>4. Start your workout to track all devices together</Text>
-        <Text style={styles.instructionText}>5. Heart rates will update in real-time for all connected devices</Text>
-        <Text style={styles.instructionText}>6. View team average and individual heart rates</Text>
-      </View>
-
-      {/* Countdown Overlay */}
-      {countdown !== null && (
-        <View style={styles.countdownOverlay}>
-          <View style={styles.countdownBox}>
-            <Text style={styles.countdownText}>{countdown}</Text>
-            <Text style={styles.countdownLabel}>Starting workout...</Text>
-          </View>
+            );
+          })}
         </View>
       )}
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0A0E27',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingTop: 10,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  selectButton: {
+    backgroundColor: '#FF6B35',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  selectButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  doneButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  doneButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  searchInput: {
+    backgroundColor: '#1A1F3A',
+    borderRadius: 10,
+    padding: 12,
+    margin: 20,
+    marginTop: 0,
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  userList: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+  userItem: {
+    backgroundColor: '#1A1F3A',
+    padding: 16,
+    borderRadius: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  userItemSelected: {
+    backgroundColor: '#2A3F5A',
+    borderColor: '#FF6B35',
+    borderWidth: 2,
+  },
+  userIdText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  checkmark: {
+    color: '#4CAF50',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    minHeight: 400,
+  },
+  emptyStateText: {
+    color: '#999',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    minHeight: 400,
+  },
+  loadingText: {
+    color: '#999',
+    marginTop: 10,
+  },
+  overviewsContainer: {
+    padding: 20,
+    paddingTop: 0,
+  },
+  userCard: {
+    backgroundColor: '#1A1F3A',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  userCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  userCardId: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  lastSync: {
+    color: '#999',
+    fontSize: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 12,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#0A0E27',
+    padding: 12,
+    borderRadius: 8,
+  },
+  statLabel: {
+    color: '#999',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  statSubValue: {
+    color: '#999',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  noData: {
+    color: '#666',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  viewDetails: {
+    color: '#FF6B35',
+    fontSize: 14,
+    textAlign: 'right',
+    marginTop: 8,
+  },
+});

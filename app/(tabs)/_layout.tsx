@@ -8,6 +8,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/src/hooks/useAuth';
+import { useInstructor } from '@/src/hooks/useInstructor';
 import { PolarLinkScreen } from '@/components/auth/PolarLinkScreen';
 import { polarOAuthService } from '@/src/services/polarOAuthService';
 
@@ -32,6 +33,7 @@ function TabBarIcon6(props: {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const { user, signOut } = useAuth();
+  const { isInstructor } = useInstructor(user?.uid);
   const [showPolarModal, setShowPolarModal] = useState(false);
   const [hasPolarToken, setHasPolarToken] = useState(false);
 
@@ -114,14 +116,16 @@ export default function TabLayout() {
         ),
         headerRight: () => (
           <View style={styles.headerRightContainer}>
-            <Pressable 
-              style={[styles.polarButton, hasPolarToken && styles.polarButtonConnected]} 
-              onPress={hasPolarToken ? handleDisconnectPolar : handleLinkPolar}
-            >
-              <Text style={styles.polarButtonText}>
-                {hasPolarToken ? '🔌 Disconnect Polar' : 'Link Polar'}
-              </Text>
-            </Pressable>
+            {!hasPolarToken && (
+              <Pressable 
+                style={styles.polarButton} 
+                onPress={handleLinkPolar}
+              >
+                <Text style={styles.polarButtonText}>
+                  Link Polar
+                </Text>
+              </Pressable>
+            )}
             <Pressable style={styles.signOutButton} onPress={handleSignOut}>
               <Text style={styles.signOutText}>Sign Out</Text>
             </Pressable>
@@ -148,16 +152,16 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workout"
         options={{
-          // href: null,
+          href: null,
           title: 'Workout',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="heartbeat" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="instr-dashboard"
+        name="multi-device"
         options={{
-          title: 'Instr Dashboard',
+          title: 'Multi device',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon6 name="people-robbery" color={color} size={24} />,
         }}
@@ -177,6 +181,15 @@ export default function TabLayout() {
           title: 'Test',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="flask" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="instr-dashboard"
+        options={{
+          href: isInstructor ? '/instr-dashboard' : null,
+          title: 'Instructor',
+          headerTitle: 'QuestFit',
+          tabBarIcon: ({ color }) => <TabBarIcon6 name="chalkboard-user" color={color} size={24} />,
         }}
       />
     </Tabs>
