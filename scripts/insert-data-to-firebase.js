@@ -27,7 +27,7 @@ async function insert() {
   const activitiesPath = path.join(baseDir, 'activities.json');
   if (fs.existsSync(activitiesPath)) {
     const activities = JSON.parse(fs.readFileSync(activitiesPath, 'utf8'));
-    const ref = userPolarRef.doc('activities').collection('daily').doc(date);
+    const ref = userPolarRef.doc('activities').collection('all').doc(date);
     batch.set(ref, { ...activities, syncedAt: new Date().toISOString() });
     console.log('Queued activities');
   }
@@ -36,7 +36,7 @@ async function insert() {
   const sleepPath = path.join(baseDir, 'sleep.json');
   if (fs.existsSync(sleepPath)) {
     const sleep = JSON.parse(fs.readFileSync(sleepPath, 'utf8'));
-    const ref = userPolarRef.doc('sleep').collection('daily').doc(date);
+    const ref = userPolarRef.doc('sleep').collection('all').doc(date);
     batch.set(ref, { ...sleep, syncedAt: new Date().toISOString() });
     console.log('Queued sleep');
   }
@@ -45,7 +45,7 @@ async function insert() {
   const rechargePath = path.join(baseDir, 'nightlyRecharge.json');
   if (fs.existsSync(rechargePath)) {
     const recharge = JSON.parse(fs.readFileSync(rechargePath, 'utf8'));
-    const ref = userPolarRef.doc('nightlyRecharge').collection('daily').doc(date);
+    const ref = userPolarRef.doc('nightlyRecharge').collection('all').doc(date);
     batch.set(ref, { ...recharge, syncedAt: new Date().toISOString() });
     console.log('Queued nightly recharge');
   }
@@ -54,7 +54,7 @@ async function insert() {
   const hrPath = path.join(baseDir, 'continuousHeartRate.json');
   if (fs.existsSync(hrPath)) {
     const hr = JSON.parse(fs.readFileSync(hrPath, 'utf8'));
-    const ref = userPolarRef.doc('continuousHeartRate').collection('daily').doc(date);
+    const ref = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
     batch.set(ref, { ...hr, syncedAt: new Date().toISOString() });
     console.log('Queued continuous heart rate');
   }
@@ -63,7 +63,7 @@ async function insert() {
   const cardioPath = path.join(baseDir, 'cardioLoad.json');
   if (fs.existsSync(cardioPath)) {
     const cardio = JSON.parse(fs.readFileSync(cardioPath, 'utf8'));
-    const ref = userPolarRef.doc('cardioLoad').collection('daily').doc(date);
+    const ref = userPolarRef.doc('cardioLoad').collection('all').doc(date);
     batch.set(ref, { data: cardio[0], syncedAt: new Date().toISOString() });
     console.log('Queued cardio load');
   }
@@ -72,11 +72,14 @@ async function insert() {
   const exercisesPath = path.join(baseDir, 'exercises.json');
   if (fs.existsSync(exercisesPath)) {
     const exercises = JSON.parse(fs.readFileSync(exercisesPath, 'utf8'));
-    for (const exercise of exercises) {
-      const ref = userPolarRef.doc('exercises').collection('all').doc(exercise.id);
-      batch.set(ref, { ...exercise, date, syncedAt: new Date().toISOString() });
-      console.log('Queued exercise', exercise.id);
-    }
+    const ref = userPolarRef.doc('exercises').collection('all').doc(date);
+    batch.set(ref, { 
+      date,
+      exercises: exercises,
+      count: exercises.length,
+      syncedAt: new Date().toISOString() 
+    });
+    console.log('Queued', exercises.length, 'exercises');
   }
 
   await batch.commit();

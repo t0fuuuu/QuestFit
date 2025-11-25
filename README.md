@@ -236,6 +236,29 @@ npm run ios      # iOS
 npm run web      # Web browser
 ```
 
+### Syncing Polar Data to Firebase
+
+To sync real-time workout data from Polar API to Firebase:
+
+```bash
+# Sync today's data for all users
+node scripts/sync-polar-data-to-firebase.js
+
+# Sync a specific date
+node scripts/sync-polar-data-to-firebase.js 2025-11-24
+
+# Check what was synced (all users)
+node scripts/query-firebase-data.js
+
+# Check data for a specific user
+node scripts/query-firebase-data.js USER_ID
+
+# Check data for a specific user and date
+node scripts/query-firebase-data.js USER_ID 2025-11-24
+```
+
+See [scripts/README-sync-to-firebase.md](scripts/README-sync-to-firebase.md) for detailed documentation.
+
 ### Firebase Setup
 
 1. Create a Firebase project at [firebase.google.com](https://firebase.google.com)

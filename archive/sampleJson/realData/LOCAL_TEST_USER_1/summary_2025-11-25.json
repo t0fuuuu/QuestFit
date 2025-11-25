@@ -1,0 +1,13 @@
+{
+  "userId": "LOCAL_TEST_USER_1",
+  "date": "2025-11-25",
+  "fetchedAt": "2025-11-25T01:33:35.245Z",
+  "dataTypes": {
+    "activities": true,
+    "sleep": false,
+    "nightlyRecharge": false,
+    "continuousHeartRate": false,
+    "cardioLoad": true,
+    "exercises": 1
+  }
+}

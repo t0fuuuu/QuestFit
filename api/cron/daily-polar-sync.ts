@@ -346,7 +346,7 @@ async function processUserData(userId: string, date: string, data: any) {
 
     // Store daily activities
     if (data.activities) {
-      const activitiesRef = userPolarRef.doc('activities').collection('daily').doc(date);
+      const activitiesRef = userPolarRef.doc('activities').collection('all').doc(date);
       batch.set(activitiesRef, {
         ...data.activities,
         syncedAt: new Date().toISOString(),
@@ -356,7 +356,7 @@ async function processUserData(userId: string, date: string, data: any) {
 
     // Store sleep data
     if (data.sleep) {
-      const sleepRef = userPolarRef.doc('sleep').collection('daily').doc(date);
+      const sleepRef = userPolarRef.doc('sleep').collection('all').doc(date);
       batch.set(sleepRef, {
         ...data.sleep,
         syncedAt: new Date().toISOString(),
@@ -366,7 +366,7 @@ async function processUserData(userId: string, date: string, data: any) {
 
     // Store nightly recharge
     if (data.nightlyRecharge) {
-      const rechargeRef = userPolarRef.doc('nightlyRecharge').collection('daily').doc(date);
+      const rechargeRef = userPolarRef.doc('nightlyRecharge').collection('all').doc(date);
       batch.set(rechargeRef, {
         ...data.nightlyRecharge,
         syncedAt: new Date().toISOString(),
@@ -376,7 +376,7 @@ async function processUserData(userId: string, date: string, data: any) {
 
     // Store continuous heart rate
     if (data.continuousHeartRate) {
-      const heartRateRef = userPolarRef.doc('continuousHeartRate').collection('daily').doc(date);
+      const heartRateRef = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
       batch.set(heartRateRef, {
         ...data.continuousHeartRate,
         syncedAt: new Date().toISOString(),
@@ -386,7 +386,7 @@ async function processUserData(userId: string, date: string, data: any) {
 
     // Store cardio load
     if (data.cardioLoad && data.cardioLoad.length > 0) {
-      const cardioLoadRef = userPolarRef.doc('cardioLoad').collection('daily').doc(date);
+      const cardioLoadRef = userPolarRef.doc('cardioLoad').collection('all').doc(date);
       batch.set(cardioLoadRef, {
         data: data.cardioLoad[0], // First item is today's data
         syncedAt: new Date().toISOString(),
@@ -394,18 +394,20 @@ async function processUserData(userId: string, date: string, data: any) {
       console.log(`  💪 Cardio load queued for storage`);
     }
 
-    // Store exercises
+    // Store exercises - group by date for easier filtering
     if (data.exercises && data.exercises.length > 0) {
-      for (const exercise of data.exercises) {
-        // Extract exercise ID from the exercise data or generate one
-        const exerciseId = exercise.id || `${userId}_${date}_${Date.now()}`;
-        const exerciseRef = userPolarRef.doc('exercises').collection('all').doc(exerciseId);
-        batch.set(exerciseRef, {
-          ...exercise,
-          date,
-          syncedAt: new Date().toISOString(),
-        });
-      }
+      const exercisesForDate = data.exercises.map((exercise: any) => ({
+        ...exercise,
+        syncedAt: new Date().toISOString(),
+      }));
+      
+      const exerciseRef = userPolarRef.doc('exercises').collection('all').doc(date);
+      batch.set(exerciseRef, {
+        date,
+        exercises: exercisesForDate,
+        count: exercisesForDate.length,
+        syncedAt: new Date().toISOString(),
+      });
       console.log(`  🏃 ${data.exercises.length} exercise(s) queued for storage`);
     }
 

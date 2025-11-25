@@ -1,0 +1,17 @@
+[
+  {
+    "cardio_load_level": {
+      "very_low": 0,
+      "low": 30.238512,
+      "medium": 45.35777,
+      "high": 75.59628,
+      "very_high": 120.95405
+    },
+    "date": "2025-11-25",
+    "cardio_load_status": "PRODUCTIVE_ALMOST_OVERREACHING",
+    "cardio_load_ratio": 2.488652,
+    "cardio_load": 68.0353,
+    "strain": 38.20177,
+    "tolerance": 15.350387
+  }
+]
