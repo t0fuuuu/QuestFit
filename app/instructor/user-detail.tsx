@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -53,6 +54,7 @@ export default function UserDetailScreen() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [hoveredPoint, setHoveredPoint] = useState<{time: string, hr: number} | null>(null);
 
   useEffect(() => {
     if (userId) {
@@ -369,7 +371,7 @@ export default function UserDetailScreen() {
                       const minHR = Math.min(...values);
                       const maxHR = Math.max(...values);
                       const range = maxHR - minHR;
-                      const chartHeight = 120;
+                      const chartHeight = 150;
                       
                       // Convert time strings to minutes, handling overnight sleep
                       const parseTime = (timeStr: string) => {
@@ -390,30 +392,56 @@ export default function UserDetailScreen() {
                       const timeRange = maxTime - minTime;
                       
                       return (
-                        <View>
-                          <View style={styles.chart}>
-                            {values.map((hr, index) => {
-                              // Scale x based on actual time difference
-                              const timeInMinutes = timeValues[index];
-                              const xPercent = ((timeInMinutes - minTime) / timeRange) * 100;
-                              const y = chartHeight - ((hr - minHR) / range) * chartHeight;
-                              
-                              return (
-                                <View
-                                  key={index}
-                                  style={{
-                                    position: 'absolute',
-                                    left: `${xPercent}%`,
-                                    top: y - 2,
-                                    width: 4,
-                                    height: 4,
-                                    backgroundColor: '#FF6B35',
-                                    borderRadius: 2,
-                                    marginLeft: -2,
-                                  }}
-                                />
-                              );
-                            })}
+                        <View style={{ position: 'relative' }}>
+                          {hoveredPoint && (
+                            <View style={styles.tooltip}>
+                              <Text style={styles.tooltipText}>
+                                {hoveredPoint.time} - {hoveredPoint.hr} bpm
+                              </Text>
+                            </View>
+                          )}
+                          <View style={styles.chartRow}>
+                            <View style={styles.yAxisLabels}>
+                              <Text style={styles.yAxisLabel}>{maxHR}</Text>
+                              <Text style={styles.yAxisLabel}>{Math.round((maxHR + minHR) / 2)}</Text>
+                              <Text style={styles.yAxisLabel}>{minHR}</Text>
+                            </View>
+                            <View style={styles.chart}>
+                              {values.map((hr, index) => {
+                                // Scale x based on actual time difference
+                                const timeInMinutes = timeValues[index];
+                                const xPercent = ((timeInMinutes - minTime) / timeRange) * 100;
+                                const y = chartHeight - ((hr - minHR) / range) * chartHeight;
+                                
+                                return (
+                                  <View
+                                    key={index}
+                                    onPointerEnter={() => setHoveredPoint({ time: times[index], hr })}
+                                    onPointerLeave={() => setHoveredPoint(null)}
+                                    style={{
+                                      position: 'absolute',
+                                      left: `${xPercent}%`,
+                                      top: y - 12,
+                                      width: 24,
+                                      height: 24,
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      marginLeft: -12,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <View
+                                      style={{
+                                        width: 6,
+                                        height: 6,
+                                        backgroundColor: '#FF6B35',
+                                        borderRadius: 3,
+                                      }}
+                                    />
+                                  </View>
+                                );
+                              })}
+                            </View>
                           </View>
                           <View style={styles.chartLabels}>
                             <Text style={styles.chartLabel}>{times[0]}</Text>
@@ -701,14 +729,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
   },
+  chartRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  yAxisLabels: {
+    height: 150,
+    justifyContent: 'space-between',
+    paddingRight: 8,
+    width: 35,
+  },
+  yAxisLabel: {
+    color: '#666',
+    fontSize: 10,
+    textAlign: 'right',
+  },
   chart: {
-    height: 120,
-    width: '100%',
+    height: 150,
+    flex: 1,
     position: 'relative',
     backgroundColor: '#F9F9F9',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+    padding: 16,
   },
   chartLabels: {
     flexDirection: 'row',
@@ -739,6 +783,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 4,
+  },
+  tooltip: {
+    position: 'absolute',
+    top: -35,
+    left: '50%',
+    transform: [{ translateX: -50 }],
+    backgroundColor: '#000000',
+    padding: 8,
+    borderRadius: 6,
+    zIndex: 1000,
+    alignSelf: 'center',
+  },
+  tooltipText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
