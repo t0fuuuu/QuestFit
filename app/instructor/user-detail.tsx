@@ -12,6 +12,25 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { db } from '@/src/services/firebase';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
+// Helper function to convert ISO8601 duration to readable format
+function formatDuration(iso8601Duration: string): string {
+  if (!iso8601Duration) return 'N/A';
+  
+  const match = iso8601Duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?/);
+  if (!match) return iso8601Duration;
+  
+  const hours = parseInt(match[1] || '0');
+  const minutes = parseInt(match[2] || '0');
+  const seconds = parseFloat(match[3] || '0');
+  
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (seconds > 0 && hours === 0) parts.push(`${Math.round(seconds)}s`);
+  
+  return parts.length > 0 ? parts.join(' ') : '0s';
+}
+
 interface UserStats {
   today: {
     activity?: any;
@@ -273,7 +292,7 @@ export default function UserDetailScreen() {
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Duration</Text>
-                  <Text style={styles.statValue}>{stats.today.sleep.sleep_time}</Text>
+                  <Text style={styles.statValue}>{formatDuration(stats.today.sleep.sleep_time)}</Text>
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Quality</Text>
@@ -328,7 +347,7 @@ export default function UserDetailScreen() {
                   <View key={exIdx} style={styles.exerciseItem}>
                     <Text style={styles.exerciseSport}>{ex.sport || 'Unknown'}</Text>
                     <Text style={styles.exerciseDetail}>
-                      Duration: {ex.duration || 'N/A'}
+                      Duration: {formatDuration(ex.duration)}
                     </Text>
                     {ex.calories && (
                       <Text style={styles.exerciseDetail}>
@@ -364,16 +383,16 @@ export default function UserDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F9F9F9',
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2F4A',
+    borderBottomColor: '#E0E0E0',
   },
   backButton: {
     paddingRight: 16,
@@ -384,7 +403,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   headerTitle: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 20,
     fontWeight: 'bold',
     flex: 1,
@@ -395,7 +414,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#999',
+    color: '#666',
     marginTop: 10,
   },
   scrollView: {
@@ -405,16 +424,18 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionTitle: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   comparisonCard: {
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F9F9F9',
     borderRadius: 12,
     padding: 20,
     flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   comparisonColumn: {
     flex: 1,
@@ -422,23 +443,25 @@ const styles = StyleSheet.create({
   },
   divider: {
     width: 1,
-    backgroundColor: '#2A2F4A',
+    backgroundColor: '#E0E0E0',
     marginHorizontal: 20,
   },
   columnLabel: {
-    color: '#999',
+    color: '#666',
     fontSize: 12,
     marginBottom: 12,
     textTransform: 'uppercase',
   },
   card: {
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F9F9F9',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   cardSubtitle: {
-    color: '#999',
+    color: '#666',
     fontSize: 14,
     marginBottom: 8,
   },
@@ -452,22 +475,22 @@ const styles = StyleSheet.create({
     minWidth: '30%',
   },
   statLabel: {
-    color: '#999',
+    color: '#666',
     fontSize: 12,
     marginTop: 4,
   },
   statValue: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 24,
     fontWeight: 'bold',
   },
   statSubValue: {
-    color: '#999',
+    color: '#666',
     fontSize: 14,
     marginTop: 2,
   },
   noData: {
-    color: '#666',
+    color: '#999',
     fontSize: 14,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -479,23 +502,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   exerciseItem: {
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#FFFFFF',
     padding: 12,
     borderRadius: 8,
     marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   exerciseSport: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 4,
   },
   exerciseDetail: {
-    color: '#999',
+    color: '#666',
     fontSize: 13,
   },
   infoText: {
-    color: '#999',
+    color: '#666',
     fontSize: 14,
   },
 });

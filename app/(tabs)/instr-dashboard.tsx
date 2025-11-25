@@ -326,7 +326,7 @@ export default function InstructorDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     flexDirection: 'row',
@@ -338,11 +338,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: '#666',
     textAlign: 'center',
     marginTop: 10,
   },
@@ -368,12 +368,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   searchInput: {
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F5F5F5',
     borderRadius: 10,
     padding: 12,
     margin: 20,
     marginTop: 0,
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 16,
   },
   userList: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   userItem: {
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F5F5F5',
     padding: 16,
     borderRadius: 10,
     marginBottom: 10,
@@ -390,12 +390,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userItemSelected: {
-    backgroundColor: '#2A3F5A',
+    backgroundColor: '#FFE8E0',
     borderColor: '#FF6B35',
     borderWidth: 2,
   },
   userIdText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 14,
   },
   checkmark: {
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   emptyStateText: {
-    color: '#999',
+    color: '#666',
     fontSize: 16,
     textAlign: 'center',
   },
@@ -423,7 +423,7 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   loadingText: {
-    color: '#999',
+    color: '#666',
     marginTop: 10,
   },
   overviewsContainer: {
@@ -431,10 +431,12 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   userCard: {
-    backgroundColor: '#1A1F3A',
+    backgroundColor: '#F9F9F9',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   userCardHeader: {
     flexDirection: 'row',
@@ -443,12 +445,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   userCardId: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 18,
     fontWeight: 'bold',
   },
   lastSync: {
-    color: '#999',
+    color: '#666',
     fontSize: 12,
   },
   statsGrid: {
@@ -460,27 +462,29 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#0A0E27',
+    backgroundColor: '#FFFFFF',
     padding: 12,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   statLabel: {
-    color: '#999',
+    color: '#666',
     fontSize: 12,
     marginBottom: 4,
   },
   statValue: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
   },
   statSubValue: {
-    color: '#999',
+    color: '#666',
     fontSize: 12,
     marginTop: 2,
   },
   noData: {
-    color: '#666',
+    color: '#999',
     fontSize: 14,
     fontStyle: 'italic',
   },
