@@ -107,6 +107,10 @@ export default function TabLayout() {
         // prevent a hydration error in React Navigation v6 i think idk it breaks if i dont put it there
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
+        headerTitleStyle: {
+          flex: 1,
+          textAlign: 'center',
+        },
         headerLeft: () => (
           <Image 
             source={require('@/assets/images/icon.png')} 
@@ -224,7 +228,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginRight: 16,
+    marginRight: 8,
   },
   polarButton: {
     paddingHorizontal: 12,

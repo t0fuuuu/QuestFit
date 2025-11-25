@@ -289,9 +289,9 @@ export default function UserDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sleep & Recovery</Text>
           <View style={styles.card}>
-            <Text style={styles.cardSubtitle}>Last Night</Text>
             {stats?.today.sleep ? (
               <>
+                <Text style={styles.cardSubtitle}>Last Night</Text>
                 <View style={styles.statsGrid}>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Duration</Text>
