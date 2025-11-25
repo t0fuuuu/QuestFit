@@ -1,15 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
-import dataConfig from './polar-data-config.json';
+const admin = require('firebase-admin');
 
 const POLAR_BASE_URL = 'https://www.polaraccesslink.com/v3';
 
-// Initialize Firebase Admin (for server-side)
-if (getApps().length === 0) {
-  initializeApp({
-    credential: cert({
+// Initialize Firebase Admin
+if (admin.apps.length === 0) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
@@ -17,41 +15,11 @@ if (getApps().length === 0) {
   });
 }
 
-const adminDb = getFirestore();
+const db = admin.firestore();
 
 /**
- * Filter object to only include specified fields from config
- */
-function filterFields(data: any, fields: string[]): any {
-  if (!data || typeof data !== 'object') return data;
-  
-  const filtered: any = {};
-  for (const field of fields) {
-    if (field in data) {
-      filtered[field] = data[field];
-    }
-  }
-  return filtered;
-}
-
-// In a production environment, you'd fetch this from a database
-// For now, we'll use environment variables or a simple storage mechanism
-interface UserToken {
-  userId: string;
-  accessToken: string;
-  polarUserId?: string;
-}
-
-/**
- * Daily cron job to poll Polar API for new user data
- * Runs at 23:00 UTC daily
- * 
- * This endpoint fetches for each user:
- * - Daily activities (steps, calories, active duration, distance)
- * - Sleep data (sleep stages, duration, quality scores)
- * - Nightly recharge (ANS charge, sleep charge)
- * - Continuous heart rate throughout the day
- * - Cardio load (4-day trend data)
+ * Daily cron job to sync Polar API data for all users
+ * Runs at 23:00 UTC daily (11 PM)
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Verify this is a cron job request from Vercel
@@ -64,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   console.log('🕐 Daily Polar sync started at', new Date().toISOString());
 
   try {
-    // Get today's date in YYYY-MM-DD format
+    // Get today's date
     const today = new Date().toISOString().split('T')[0];
     
     // Get all users with Polar tokens
@@ -83,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       successful: 0,
       failed: 0,
       errors: [] as any[],
-      synced: [] as any[],
+      summaries: [] as any[],
     };
 
     // Process each user
@@ -91,22 +59,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         console.log(`📊 Syncing data for user ${user.userId}`);
         
-        const userData = await fetchUserDailyData(user.accessToken, today);
-        
-        // Process and store the data (you'll implement this based on your needs)
-        await processUserData(user.userId, today, userData);
+        const data = await fetchUserDailyData(user.accessToken, today);
+        const summary = await insertDataToFirebase(user.userId, today, data);
         
         results.successful++;
-        results.synced.push({
-          userId: user.userId,
-          date: today,
-          hasActivities: !!userData.activities,
-          hasSleep: !!userData.sleep,
-          hasNightlyRecharge: !!userData.nightlyRecharge,
-          hasContinuousHeartRate: !!userData.continuousHeartRate,
-          hasCardioLoad: !!userData.cardioLoad,
-          exerciseCount: userData.exercises?.length || 0,
-        });
+        results.summaries.push(summary);
         
         console.log(`✅ Successfully synced user ${user.userId}`);
       } catch (error: any) {
@@ -115,7 +72,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         results.errors.push({
           userId: user.userId,
           error: error.message,
-          status: error.response?.status,
         });
       }
     }
@@ -138,177 +94,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * Fetch daily data from Polar API for a specific user
- */
-async function fetchUserDailyData(accessToken: string, date: string) {
-  const headers = {
-    'Authorization': `Bearer ${accessToken}`,
-    'Accept': 'application/json',
-  };
-
-  const result: any = { date, exercises: [] };
-
-  // Fetch daily activities (steps, calories, etc.)
-  try {
-    const activitiesResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/activities/${date}`,
-      { headers }
-    );
-    result.activities = filterFields(activitiesResponse.data, dataConfig.activities);
-    console.log(`  ✓ Activities fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Activities error:`, error.message);
-      result.activitiesError = error.message;
-    } else {
-      console.log(`  - No activities for ${date}`);
-    }
-  }
-
-  // Fetch sleep data for the specific date
-  try {
-    const sleepResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/sleep/${date}`,
-      { headers }
-    );
-    result.sleep = filterFields(sleepResponse.data, dataConfig.sleep);
-    console.log(`  ✓ Sleep data fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Sleep error:`, error.message);
-      result.sleepError = error.message;
-    } else {
-      console.log(`  - No sleep data for ${date}`);
-    }
-  }
-
-  // Fetch nightly recharge for the specific date
-  try {
-    const rechargeResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/nightly-recharge/${date}`,
-      { headers }
-    );
-    result.nightlyRecharge = filterFields(rechargeResponse.data, dataConfig.nightlyRecharge);
-    console.log(`  ✓ Nightly recharge fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Nightly recharge error:`, error.message);
-      result.nightlyRechargeError = error.message;
-    } else {
-      console.log(`  - No nightly recharge for ${date}`);
-    }
-  }
-
-  // Fetch continuous heart rate for the specific date
-  try {
-    const heartRateResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/continuous-heart-rate/${date}`,
-      { headers }
-    );
-    result.continuousHeartRate = filterFields(heartRateResponse.data, dataConfig.continuousHeartRate);
-    console.log(`  ✓ Continuous heart rate fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Continuous heart rate error:`, error.message);
-      result.continuousHeartRateError = error.message;
-    } else {
-      console.log(`  - No continuous heart rate for ${date}`);
-    }
-  }
-
-  // Fetch cardio load (last 1 day only)
-  try {
-    const cardioLoadResponse = await axios.get(
-      `${POLAR_BASE_URL}/users/cardio-load/period/days/1`,
-      { headers }
-    );
-    // Filter fields for each item in the array
-    result.cardioLoad = cardioLoadResponse.data.map((item: any) => 
-      filterFields(item, dataConfig.cardioLoad)
-    );
-    console.log(`  ✓ Cardio load fetched`);
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Cardio load error:`, error.message);
-      result.cardioLoadError = error.message;
-    } else {
-      console.log(`  - No cardio load data`);
-    }
-  }
-
-  // Fetch exercises/workouts uploaded today (within past 24h)
-  try {
-    // Step 1: List all available exercises
-    const exercisesListResponse = await axios.get(
-      `${POLAR_BASE_URL}/exercises`,
-      { headers }
-    );
-    
-    const exercises = exercisesListResponse.data || [];
-    console.log(`  ℹ️  Found ${exercises.length} total exercises`);
-    
-    // Step 2: Filter exercises uploaded today (upload_time matches today's date)
-    const todayExercises = exercises.filter((ex: any) => {
-      // Check if exercise upload_time is today
-      const uploadDate = ex.upload_time?.split('T')[0];
-      return uploadDate === date;
-    });
-    
-    console.log(`  ℹ️  Found ${todayExercises.length} exercises uploaded on ${date}`);
-    
-    // Step 3: Fetch detailed data for each exercise (with samples)
-    for (const exercise of todayExercises) {
-      try {
-        const exerciseId = exercise.id;
-        
-        // Fetch exercise with samples (heart rate, speed, etc.)
-        const exerciseDetailsResponse = await axios.get(
-          `${POLAR_BASE_URL}/exercises/${exerciseId}?samples=true`,
-          { headers }
-        );
-        
-        // Filter to only include configured fields
-        const filteredExercise = filterFields(exerciseDetailsResponse.data, dataConfig.exercises);
-        result.exercises.push(filteredExercise);
-        console.log(`  ✓ Exercise ${exerciseId} fetched with samples`);
-      } catch (error: any) {
-        console.error(`  ✗ Error fetching exercise ${exercise.id}:`, error.message);
-        result.exerciseErrors = result.exerciseErrors || [];
-        result.exerciseErrors.push({
-          exerciseId: exercise.id,
-          error: error.message,
-        });
-      }
-    }
-  } catch (error: any) {
-    if (error.response?.status !== 404) {
-      console.error(`  ✗ Exercises error:`, error.message);
-      result.exercisesError = error.message;
-    } else {
-      console.log(`  - No exercises available`);
-    }
-  }
-
-  return result;
-}
-
-/**
  * Get all users who have connected their Polar accounts
  */
-async function getUsersWithPolarTokens(): Promise<UserToken[]> {
+async function getUsersWithPolarTokens() {
   try {
-    const usersRef = adminDb.collection('users');
+    const usersRef = db.collection('users');
     const snapshot = await usersRef
       .where('polarAccessToken', '!=', null)
       .get();
 
     if (snapshot.empty) {
-      console.log('No users with Polar tokens found');
       return [];
     }
 
-    const users: UserToken[] = [];
-    snapshot.forEach(doc => {
+    const users: any[] = [];
+    snapshot.forEach((doc: any) => {
       const data = doc.data();
       if (data.polarAccessToken) {
         users.push({
@@ -328,95 +128,189 @@ async function getUsersWithPolarTokens(): Promise<UserToken[]> {
 }
 
 /**
- * Process and store the fetched user data in Firebase
- * 
- * Structure:
- * users/{userId}/polarData/
- *   - activities/{date}
- *   - sleep/{date}
- *   - nightlyRecharge/{date}
- *   - continuousHeartRate/{date}
- *   - cardioLoad/{date}
- *   - exercises/{exerciseId}
+ * Fetch data from Polar API for a specific endpoint
  */
-async function processUserData(userId: string, date: string, data: any) {
+async function fetchPolarData(accessToken: string, endpoint: string) {
+  const headers = {
+    'Authorization': `Bearer ${accessToken}`,
+    'Accept': 'application/json',
+  };
+
   try {
-    const batch = adminDb.batch();
-    const userPolarRef = adminDb.collection('users').doc(userId).collection('polarData');
-
-    // Store daily activities
-    if (data.activities) {
-      const activitiesRef = userPolarRef.doc('activities').collection('all').doc(date);
-      batch.set(activitiesRef, {
-        ...data.activities,
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  📊 Activities queued for storage`);
-    }
-
-    // Store sleep data
-    if (data.sleep) {
-      const sleepRef = userPolarRef.doc('sleep').collection('all').doc(date);
-      batch.set(sleepRef, {
-        ...data.sleep,
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  😴 Sleep data queued for storage`);
-    }
-
-    // Store nightly recharge
-    if (data.nightlyRecharge) {
-      const rechargeRef = userPolarRef.doc('nightlyRecharge').collection('all').doc(date);
-      batch.set(rechargeRef, {
-        ...data.nightlyRecharge,
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  ⚡ Nightly recharge queued for storage`);
-    }
-
-    // Store continuous heart rate
-    if (data.continuousHeartRate) {
-      const heartRateRef = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
-      batch.set(heartRateRef, {
-        ...data.continuousHeartRate,
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  ❤️  Continuous heart rate queued for storage`);
-    }
-
-    // Store cardio load
-    if (data.cardioLoad && data.cardioLoad.length > 0) {
-      const cardioLoadRef = userPolarRef.doc('cardioLoad').collection('all').doc(date);
-      batch.set(cardioLoadRef, {
-        data: data.cardioLoad[0], // First item is today's data
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  💪 Cardio load queued for storage`);
-    }
-
-    // Store exercises - group by date for easier filtering
-    if (data.exercises && data.exercises.length > 0) {
-      const exercisesForDate = data.exercises.map((exercise: any) => ({
-        ...exercise,
-        syncedAt: new Date().toISOString(),
-      }));
-      
-      const exerciseRef = userPolarRef.doc('exercises').collection('all').doc(date);
-      batch.set(exerciseRef, {
-        date,
-        exercises: exercisesForDate,
-        count: exercisesForDate.length,
-        syncedAt: new Date().toISOString(),
-      });
-      console.log(`  🏃 ${data.exercises.length} exercise(s) queued for storage`);
-    }
-
-    // Commit all writes at once
-    await batch.commit();
-    console.log(`  ✅ All data successfully stored for user ${userId}`);
-
+    const response = await axios.get(`${POLAR_BASE_URL}${endpoint}`, { headers });
+    return response.data;
   } catch (error: any) {
-    console.error(`  ❌ Error storing data for user ${userId}:`, error.message);
+    if (error.response?.status === 404) {
+      return null;
+    }
     throw error;
   }
+}
+
+/**
+ * Fetch all data types for a user on a specific date
+ */
+async function fetchUserDailyData(accessToken: string, date: string) {
+  const result: any = {
+    date,
+    activities: null,
+    sleep: null,
+    nightlyRecharge: null,
+    continuousHeartRate: null,
+    cardioLoad: null,
+    exercises: [],
+    errors: [],
+  };
+
+  // Fetch activities
+  try {
+    result.activities = await fetchPolarData(accessToken, `/users/activities/${date}`);
+  } catch (error: any) {
+    result.errors.push({ type: 'activities', error: error.message });
+  }
+
+  // Fetch sleep
+  try {
+    result.sleep = await fetchPolarData(accessToken, `/users/sleep/${date}`);
+  } catch (error: any) {
+    result.errors.push({ type: 'sleep', error: error.message });
+  }
+
+  // Fetch nightly recharge
+  try {
+    result.nightlyRecharge = await fetchPolarData(accessToken, `/users/nightly-recharge/${date}`);
+  } catch (error: any) {
+    result.errors.push({ type: 'nightlyRecharge', error: error.message });
+  }
+
+  // Fetch continuous heart rate
+  try {
+    result.continuousHeartRate = await fetchPolarData(accessToken, `/users/continuous-heart-rate/${date}`);
+  } catch (error: any) {
+    result.errors.push({ type: 'continuousHeartRate', error: error.message });
+  }
+
+  // Fetch cardio load
+  try {
+    const cardioData = await fetchPolarData(accessToken, `/users/cardio-load/period/days/1`);
+    if (cardioData && cardioData.length > 0) {
+      result.cardioLoad = cardioData[0];
+    }
+  } catch (error: any) {
+    result.errors.push({ type: 'cardioLoad', error: error.message });
+  }
+
+  // Fetch exercises
+  try {
+    const exercisesList = await fetchPolarData(accessToken, `/exercises`);
+    
+    if (exercisesList && exercisesList.length > 0) {
+      const todayExercises = exercisesList.filter((ex: any) => {
+        const uploadDate = ex.upload_time?.split('T')[0];
+        return uploadDate === date;
+      });
+      
+      for (const exercise of todayExercises) {
+        try {
+          const exerciseDetails = await fetchPolarData(accessToken, `/exercises/${exercise.id}?samples=true`);
+          if (exerciseDetails) {
+            result.exercises.push(exerciseDetails);
+          }
+        } catch (error: any) {
+          result.errors.push({ type: 'exercise', exerciseId: exercise.id, error: error.message });
+        }
+      }
+    }
+  } catch (error: any) {
+    result.errors.push({ type: 'exercises', error: error.message });
+  }
+
+  return result;
+}
+
+/**
+ * Insert fetched data into Firebase
+ */
+async function insertDataToFirebase(userId: string, date: string, data: any) {
+  const batch = db.batch();
+  const userPolarRef = db.collection('users').doc(userId).collection('polarData');
+  const syncedAt = new Date().toISOString();
+  let itemsQueued = 0;
+
+  // Insert activities
+  if (data.activities) {
+    const ref = userPolarRef.doc('activities').collection('all').doc(date);
+    batch.set(ref, { ...data.activities, syncedAt });
+    itemsQueued++;
+  }
+
+  // Insert sleep
+  if (data.sleep) {
+    const ref = userPolarRef.doc('sleep').collection('all').doc(date);
+    batch.set(ref, { ...data.sleep, syncedAt });
+    itemsQueued++;
+  }
+
+  // Insert nightly recharge
+  if (data.nightlyRecharge) {
+    const ref = userPolarRef.doc('nightlyRecharge').collection('all').doc(date);
+    batch.set(ref, { ...data.nightlyRecharge, syncedAt });
+    itemsQueued++;
+  }
+
+  // Insert continuous heart rate
+  if (data.continuousHeartRate) {
+    const ref = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
+    batch.set(ref, { ...data.continuousHeartRate, syncedAt });
+    itemsQueued++;
+  }
+
+  // Insert cardio load
+  if (data.cardioLoad) {
+    const ref = userPolarRef.doc('cardioLoad').collection('all').doc(date);
+    batch.set(ref, { data: data.cardioLoad, syncedAt });
+    itemsQueued++;
+  }
+
+  // Insert exercises
+  if (data.exercises && data.exercises.length > 0) {
+    const exercisesForDate = data.exercises.map((exercise: any) => ({
+      ...exercise,
+      syncedAt
+    }));
+    
+    const ref = userPolarRef.doc('exercises').collection('all').doc(date);
+    batch.set(ref, { 
+      date,
+      exercises: exercisesForDate,
+      count: exercisesForDate.length,
+      syncedAt 
+    });
+    itemsQueued++;
+  }
+
+  // Create summary document
+  const summary = {
+    userId,
+    date,
+    syncedAt,
+    dataTypes: {
+      activities: !!data.activities,
+      sleep: !!data.sleep,
+      nightlyRecharge: !!data.nightlyRecharge,
+      continuousHeartRate: !!data.continuousHeartRate,
+      cardioLoad: !!data.cardioLoad,
+      exercises: data.exercises.length,
+    },
+    errors: data.errors,
+    itemsStored: itemsQueued,
+  };
+
+  const summaryRef = userPolarRef.doc('syncSummary').collection('all').doc(date);
+  batch.set(summaryRef, summary);
+
+  // Commit the batch
+  await batch.commit();
+
+  return summary;
 }
