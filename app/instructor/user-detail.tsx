@@ -255,10 +255,10 @@ export default function UserDetailScreen() {
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
               <Text style={styles.columnLabel}>Today</Text>
-              {stats?.today.cardioLoad ? (
+              {stats?.today.cardioLoad?.data?.cardio_load_ratio ? (
                 <>
                   <Text style={styles.statValue}>
-                    {stats.today.cardioLoad.data?.cardio_load_ratio?.toFixed(2) || 'N/A'}
+                    {stats.today.cardioLoad.data.cardio_load_ratio.toFixed(2)}
                   </Text>
                   <Text style={styles.statLabel}>ratio</Text>
                 </>
@@ -289,24 +289,159 @@ export default function UserDetailScreen() {
           <View style={styles.card}>
             <Text style={styles.cardSubtitle}>Last Night</Text>
             {stats?.today.sleep ? (
-              <View style={styles.statsGrid}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Duration</Text>
-                  <Text style={styles.statValue}>{formatDuration(stats.today.sleep.sleep_time)}</Text>
+              <>
+                <View style={styles.statsGrid}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Duration</Text>
+                    {stats.today.sleep.sleep_start_time && stats.today.sleep.sleep_end_time ? (
+                      <Text style={styles.statValue}>
+                        {(() => {
+                          const start = new Date(stats.today.sleep.sleep_start_time);
+                          const end = new Date(stats.today.sleep.sleep_end_time);
+                          const durationMs = end.getTime() - start.getTime();
+                          const hours = Math.floor(durationMs / (1000 * 60 * 60));
+                          const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+                          return `${hours}h ${minutes}m`;
+                        })()}
+                      </Text>
+                    ) : (
+                      <Text style={styles.noData}>No data</Text>
+                    )}
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Deep Sleep</Text>
+                    {(() => {
+                      const deepSleep = stats.today.sleep.deep_sleep ?? stats.today.sleep.data?.deep_sleep;
+                      if (deepSleep) {
+                        const hours = Math.floor(deepSleep / 3600);
+                        const minutes = Math.floor((deepSleep % 3600) / 60);
+                        return (
+                          <Text style={styles.statValue}>
+                            {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}
+                          </Text>
+                        );
+                      }
+                      return <Text style={styles.noData}>No data</Text>;
+                    })()}
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statLabel}>Sleep Score</Text>
+                    {stats.today.sleep.sleep_score ? (
+                      <Text style={styles.statValue}>
+                        {stats.today.sleep.sleep_score}
+                      </Text>
+                    ) : (
+                      <Text style={styles.noData}>No data</Text>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Quality</Text>
-                  <Text style={styles.statValue}>
-                    {stats.today.sleep.sleep_score || 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>Interruptions</Text>
-                  <Text style={styles.statValue}>
-                    {stats.today.sleep.interruptions || 0}
-                  </Text>
-                </View>
-              </View>
+                
+                {/* Heart Rate Chart */}
+                {stats.today.sleep.heart_rate_samples && (
+                  <View style={styles.chartContainer}>
+                    <Text style={styles.chartTitle}>Heart Rate During Sleep</Text>
+                    {(() => {
+                      const hrSamples = stats.today.sleep.heart_rate_samples;
+                      
+                      // Sort data by time
+                      const sortedEntries = Object.entries(hrSamples).sort((a, b) => {
+                        const [hoursA, minutesA] = a[0].split(':').map(Number);
+                        const [hoursB, minutesB] = b[0].split(':').map(Number);
+                        
+                        // Convert to minutes, handling overnight
+                        let timeA = hoursA * 60 + minutesA;
+                        let timeB = hoursB * 60 + minutesB;
+                        
+                        // If hour is small (0-11), it's likely after midnight
+                        if (hoursA < 12 && hoursA < 20) timeA += 24 * 60;
+                        if (hoursB < 12 && hoursB < 20) timeB += 24 * 60;
+                        
+                        return timeA - timeB;
+                      });
+                      
+                      const times = sortedEntries.map(e => e[0]);
+                      const values = sortedEntries.map(e => e[1]) as number[];
+                      
+                      if (times.length === 0) {
+                        return <Text style={styles.noData}>No heart rate data</Text>;
+                      }
+
+                      const minHR = Math.min(...values);
+                      const maxHR = Math.max(...values);
+                      const range = maxHR - minHR;
+                      const chartHeight = 120;
+                      
+                      // Convert time strings to minutes, handling overnight sleep
+                      const parseTime = (timeStr: string) => {
+                        const [hours, minutes] = timeStr.split(':').map(Number);
+                        let totalMinutes = hours * 60 + minutes;
+                        
+                        // If hour is small (0-11), assume it's after midnight
+                        if (hours < 12 && hours < 20) {
+                          totalMinutes += 24 * 60;
+                        }
+                        
+                        return totalMinutes;
+                      };
+                      
+                      const timeValues = times.map(time => parseTime(time));
+                      const minTime = timeValues[0];
+                      const maxTime = timeValues[timeValues.length - 1];
+                      const timeRange = maxTime - minTime;
+                      
+                      return (
+                        <View>
+                          <View style={styles.chart}>
+                            {values.map((hr, index) => {
+                              // Scale x based on actual time difference
+                              const timeInMinutes = timeValues[index];
+                              const xPercent = ((timeInMinutes - minTime) / timeRange) * 100;
+                              const y = chartHeight - ((hr - minHR) / range) * chartHeight;
+                              
+                              return (
+                                <View
+                                  key={index}
+                                  style={{
+                                    position: 'absolute',
+                                    left: `${xPercent}%`,
+                                    top: y - 2,
+                                    width: 4,
+                                    height: 4,
+                                    backgroundColor: '#FF6B35',
+                                    borderRadius: 2,
+                                    marginLeft: -2,
+                                  }}
+                                />
+                              );
+                            })}
+                          </View>
+                          <View style={styles.chartLabels}>
+                            <Text style={styles.chartLabel}>{times[0]}</Text>
+                            <Text style={styles.chartLabel}>{times[Math.floor(times.length / 2)]}</Text>
+                            <Text style={styles.chartLabel}>{times[times.length - 1]}</Text>
+                          </View>
+                          <View style={styles.chartStats}>
+                            <View>
+                              <Text style={styles.chartStatLabel}>Min</Text>
+                              <Text style={styles.chartStatValue}>{minHR} bpm</Text>
+                            </View>
+                            <View>
+                              <Text style={styles.chartStatLabel}>Max</Text>
+                              <Text style={styles.chartStatValue}>{maxHR} bpm</Text>
+                            </View>
+                            <View>
+                              <Text style={styles.chartStatLabel}>Avg</Text>
+                              <Text style={styles.chartStatValue}>
+                                {stats.today.nightlyRecharge?.heart_rate_avg || Math.round(values.reduce((a, b) => a + b, 0) / values.length)} bpm
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })()}
+                  </View>
+                )}
+              </>
             ) : (
               <Text style={styles.noData}>No sleep data</Text>
             )}
@@ -318,15 +453,43 @@ export default function UserDetailScreen() {
               <View style={styles.statsGrid}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>ANS Charge</Text>
-                  <Text style={styles.statValue}>
-                    {stats.today.nightlyRecharge.ans_charge || 'N/A'}
-                  </Text>
+                  {stats.today.nightlyRecharge.ans_charge ? (
+                    <Text style={styles.statValue}>
+                      {stats.today.nightlyRecharge.ans_charge}
+                    </Text>
+                  ) : (
+                    <Text style={styles.noData}>No data</Text>
+                  )}
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Sleep Charge</Text>
-                  <Text style={styles.statValue}>
-                    {stats.today.nightlyRecharge.sleep_charge || 'N/A'}
-                  </Text>
+                  {stats.today.nightlyRecharge.sleep_charge ? (
+                    <Text style={styles.statValue}>
+                      {stats.today.nightlyRecharge.sleep_charge}
+                    </Text>
+                  ) : (
+                    <Text style={styles.noData}>No data</Text>
+                  )}
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>HRV Avg</Text>
+                  {stats.today.nightlyRecharge.heart_rate_variability_avg ? (
+                    <Text style={styles.statValue}>
+                      {stats.today.nightlyRecharge.heart_rate_variability_avg}
+                    </Text>
+                  ) : (
+                    <Text style={styles.noData}>No data</Text>
+                  )}
+                </View>
+                <View style={styles.statItem}>
+                  <Text style={styles.statLabel}>Breathing Rate</Text>
+                  {stats.today.nightlyRecharge.breathing_rate_avg ? (
+                    <Text style={styles.statValue}>
+                      {stats.today.nightlyRecharge.breathing_rate_avg} /min
+                    </Text>
+                  ) : (
+                    <Text style={styles.noData}>No data</Text>
+                  )}
                 </View>
               </View>
             </View>
@@ -473,6 +636,7 @@ const styles = StyleSheet.create({
   statItem: {
     flex: 1,
     minWidth: '30%',
+    alignItems: 'flex-start',
   },
   statLabel: {
     color: '#666',
@@ -523,4 +687,58 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
   },
+  chartContainer: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  chartTitle: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  chart: {
+    height: 120,
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#F9F9F9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  chartLabel: {
+    color: '#666',
+    fontSize: 11,
+  },
+  chartStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  chartStatLabel: {
+    color: '#666',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  chartStatValue: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginTop: 4,
+  },
 });
+

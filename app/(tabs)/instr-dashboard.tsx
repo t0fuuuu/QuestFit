@@ -28,6 +28,7 @@ interface UserOverview {
   todaySleep?: {
     duration?: string;
     quality?: number;
+    goalDiff?: string;
   };
   todayExercises?: number;
 }
@@ -110,9 +111,55 @@ export default function InstructorDashboard() {
         );
         if (sleepDoc.exists()) {
           const data = sleepDoc.data();
+          
+          // Calculate sleep duration from start and end times
+          let calculatedDuration = 'N/A';
+          let goalDiff = '';
+          
+          if (data?.sleep_start_time && data?.sleep_end_time) {
+            const startTime = new Date(data.sleep_start_time);
+            const endTime = new Date(data.sleep_end_time);
+            const durationMs = endTime.getTime() - startTime.getTime();
+            const durationSeconds = Math.floor(durationMs / 1000);
+            const hours = Math.floor(durationMs / (1000 * 60 * 60));
+            const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+            calculatedDuration = `${hours}h ${minutes}m`;
+            
+            // Calculate difference from sleep goal
+            if (data?.sleep_goal) {
+              const diffSeconds = durationSeconds - data.sleep_goal;
+              const absDiffSeconds = Math.abs(diffSeconds);
+              const diffHours = Math.floor(absDiffSeconds / 3600);
+              const diffMinutes = Math.floor((absDiffSeconds % 3600) / 60);
+              
+              if (diffSeconds > 0) {
+                // Exceeded goal
+                if (diffHours > 0) {
+                  goalDiff = `Exceeded by ${diffHours}h ${diffMinutes}m`;
+                } else if (diffMinutes > 0) {
+                  goalDiff = `Exceeded by ${diffMinutes}m`;
+                } else {
+                  goalDiff = 'Goal achieved';
+                }
+              } else if (diffSeconds < 0) {
+                // Below goal
+                if (diffHours > 0) {
+                  goalDiff = `${diffHours}h ${diffMinutes}m to goal`;
+                } else if (diffMinutes > 0) {
+                  goalDiff = `${diffMinutes}m to goal`;
+                } else {
+                  goalDiff = 'Goal achieved';
+                }
+              } else {
+                goalDiff = 'Goal achieved';
+              }
+            }
+          }
+          
           overview.todaySleep = {
-            duration: data?.sleep_time,
+            duration: calculatedDuration,
             quality: data?.sleep_score,
+            goalDiff: goalDiff,
           };
         }
 
@@ -293,9 +340,9 @@ export default function InstructorDashboard() {
                         <Text style={styles.statValue}>
                           {overview.todaySleep.duration || 'N/A'}
                         </Text>
-                        {overview.todaySleep.quality && (
+                        {overview.todaySleep.goalDiff && (
                           <Text style={styles.statSubValue}>
-                            Score: {overview.todaySleep.quality}
+                            {overview.todaySleep.goalDiff}
                           </Text>
                         )}
                       </>
