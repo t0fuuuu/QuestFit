@@ -21,13 +21,19 @@ export const useAuth = () => {
 
   const checkStoredUser = useCallback(async () => {
     try {
-      const storedUID = await AsyncStorage.getItem('CURRENT_TEST_USER_UID');
-      const storedUsername = await AsyncStorage.getItem('CURRENT_TEST_USER');
+      // Try new keys first, fall back to old ones for backward compatibility
+      let storedUID = await AsyncStorage.getItem('USER_ID');
+      let storedUsername = await AsyncStorage.getItem('USER_NAME');
+
+      if (!storedUID) {
+        storedUID = await AsyncStorage.getItem('CURRENT_TEST_USER_UID');
+        storedUsername = await AsyncStorage.getItem('CURRENT_TEST_USER');
+      }
       
-      if (storedUID && storedUsername) {
+      if (storedUID) {
         setUser({
           uid: storedUID,
-          displayName: storedUsername,
+          displayName: storedUsername || 'User',
         });
       } else {
         setUser(null);
@@ -57,6 +63,8 @@ export const useAuth = () => {
 
   const signOutUser = async () => {
     try {
+      await AsyncStorage.removeItem('USER_ID');
+      await AsyncStorage.removeItem('USER_NAME');
       await AsyncStorage.removeItem('CURRENT_TEST_USER');
       await AsyncStorage.removeItem('CURRENT_TEST_USER_UID');
       setUser(null);

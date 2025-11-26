@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, FlatList } from 'react-native';
+import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, FlatList, Platform } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import { db } from '@/src/services/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { xpStyles as styles } from '@/src/styles';
 import { Creature } from '@/src/types/polar';
 import creatureService from '@/src/services/creatureService';
@@ -22,7 +22,7 @@ interface WorkoutHistoryItem {
 
 export default function XPManagementScreen() {
   const colorScheme = useColorScheme();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [currentXP, setCurrentXP] = useState<number>(0);
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
@@ -191,17 +191,53 @@ export default function XPManagementScreen() {
     updateXP(amount);
   };
 
-  const handleDisconnectPolar = async () => {
+  const performAccountDeletion = async () => {
     if (!user) return;
+    
     try {
+      console.log('🚀 Starting account deletion...');
+      setLoading(true);
+      // 1. Disconnect from Polar (API + Firebase fields)
       await polarOAuthService.disconnectPolarAccount(user.uid);
-      setWeight(null);
-      setAge(null);
-      setGender(null);
-      console.log('✅ Polar account disconnected');
+      
+      // 2. Delete User Document from Firebase
+      await deleteDoc(doc(db, 'users', user.uid));
+      
+      console.log('✅ Account deleted successfully');
+      
+      // 3. Sign Out
+      await signOut();
     } catch (error) {
-      console.error('❌ Error disconnecting Polar:', error);
-      Alert.alert('Error', 'Failed to disconnect Polar account. Please try again.');
+      console.error('❌ Error deleting account:', error);
+      Alert.alert('Error', 'Failed to delete account. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Are you sure you want to delete your account? This action cannot be undone.');
+      if (confirmed) {
+        await performAccountDeletion();
+      }
+    } else {
+      Alert.alert(
+        'Delete Account',
+        'Are you sure you want to delete your account? This action cannot be undone.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: performAccountDeletion,
+          },
+        ]
+      );
     }
   };
 
@@ -462,9 +498,9 @@ export default function XPManagementScreen() {
 
             <Pressable
               style={styles.disconnectPolarButton}
-              onPress={handleDisconnectPolar}
+              onPress={handleDeleteAccount}
             >
-              <Text style={styles.disconnectPolarButtonText}>🔌 Disconnect Polar</Text>
+              <Text style={styles.disconnectPolarButtonText}>🗑️ Delete Account</Text>
             </Pressable>
           </View>
         )}

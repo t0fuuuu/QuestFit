@@ -1,20 +1,10 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Pressable, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Pressable, ActivityIndicator, Modal, Alert } from 'react-native';
 import { Text } from '@/components/Themed';
-import { Picker } from '@react-native-picker/picker';
-import { db } from '@/src/services/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notifyAuthChange } from '@/src/hooks/useAuth';
-
-// Predefined test users with fixed UIDs (stored locally)
-const TEST_USERS = [
-  { id: 'test1', label: 'Test User 1', uid: 'LOCAL_TEST_USER_1' },
-  { id: 'test2', label: 'Test User 2', uid: 'LOCAL_TEST_USER_2' },
-  { id: 'test3', label: 'Test User 3', uid: 'LOCAL_TEST_USER_3' },
-  { id: 'test4', label: 'Test User 4', uid: 'LOCAL_TEST_USER_4' },
-  { id: 'admin', label: 'Admin User', uid: 'LOCAL_ADMIN_USER' },
-];
+import { polarOAuthService } from '@/src/services/polarOAuthService';
+import { ConsentModal } from './ConsentModal';
 
 interface SignInScreenProps {
   onSignInSuccess?: () => void;
@@ -23,70 +13,94 @@ interface SignInScreenProps {
 export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState(TEST_USERS[0].id);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
+  const [pendingUser, setPendingUser] = useState<{ uid: string; displayName: string } | null>(null);
 
-  const handleSignIn = async () => {
+  const handlePolarLogin = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      console.log('🔵 Starting Sign In');
-      console.log('Selected user:', selectedUser);
-
-      const selectedUserData = TEST_USERS.find(u => u.id === selectedUser);
+      console.log('🔵 Starting Polar Login');
       
-      if (!selectedUserData) {
-        throw new Error('Invalid user selection');
-      }
-
-      // Store the selected user ID locally
-      await AsyncStorage.setItem('CURRENT_TEST_USER', selectedUser);
-      await AsyncStorage.setItem('CURRENT_TEST_USER_UID', selectedUserData.uid);
+      const result = await polarOAuthService.login();
       
-      console.log('✅ Signed in as:', selectedUserData.label, '(UID:', selectedUserData.uid, ')');
-      
-      // Check if user profile exists, if not create it
-      const userDoc = await getDoc(doc(db, 'users', selectedUserData.uid));
-      if (!userDoc.exists()) {
-        console.log('Creating new user profile...');
-        try {
-          await setDoc(doc(db, 'users', selectedUserData.uid), {
-            userId: selectedUserData.uid,
-            username: selectedUser,
-            displayName: selectedUserData.label,
-            level: 1,
-            xp: 0,
-            totalWorkouts: 0,
-            totalCalories: 0,
-            totalDistance: 0,
-            capturedCreatures: [],
-            achievements: [],
-          });
-          console.log('✅ User profile initialized');
-        } catch (profileError) {
-          console.warn('⚠️ Could not create user profile:', profileError);
+      if (result) {
+        const { user, isNewUser } = result;
+        
+        if (isNewUser) {
+          // Show consent modal for new users
+          setPendingUser(user);
+          setShowConsentModal(true);
+        } else {
+          // Existing user, log in directly
+          await completeLogin(user);
         }
       } else {
-        console.log('✅ User profile found');
+        // Login cancelled or failed silently
+        setLoading(false);
       }
+    } catch (err: any) {
+      console.error('🔴 Login error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to sign in with Polar');
+      setLoading(false);
+    }
+  };
+
+  const completeLogin = async (user: { uid: string; displayName: string }) => {
+    try {
+      // Store user info locally
+      await AsyncStorage.setItem('USER_ID', user.uid);
+      await AsyncStorage.setItem('USER_NAME', user.displayName);
+      
+      // Legacy keys for backward compatibility if needed
+      await AsyncStorage.setItem('CURRENT_TEST_USER', user.displayName);
+      await AsyncStorage.setItem('CURRENT_TEST_USER_UID', user.uid);
+      
+      console.log('✅ Signed in as:', user.displayName, '(UID:', user.uid, ')');
       
       // Notify auth change listeners
       notifyAuthChange();
       onSignInSuccess?.();
-    } catch (err: any) {
-      console.error('🔴 Full error object:', err);
-      console.error('Error code:', err?.code);
-      console.error('Error message:', err?.message);
-      
-      // Check if it's a configuration error
-      if (err?.code === 'auth/configuration-not-found') {
-        setError('Firebase not configured. Please enable Anonymous Auth in Firebase Console: Project Settings → Authentication → Sign-in method → Anonymous');
-      } else {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to sign in';
-        setError(errorMessage);
-      }
+    } catch (err) {
+      console.error('Error completing login:', err);
+      setError('Failed to save login session');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConsentAccept = async () => {
+    if (!pendingUser) return;
+    
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.setConsentGiven(pendingUser.uid);
+      setShowConsentModal(false);
+      await completeLogin(pendingUser);
+    } catch (error) {
+      console.error('Error recording consent:', error);
+      Alert.alert('Error', 'Failed to record consent. Please try again.');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  const handleConsentDecline = async () => {
+    if (!pendingUser) return;
+    
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.disconnectPolarAccount(pendingUser.uid);
+      setShowConsentModal(false);
+      setPendingUser(null);
+      setLoading(false);
+      Alert.alert('Declined', 'Login cancelled. You must accept the terms to use QuestFit.');
+    } catch (error) {
+      console.error('Error declining consent:', error);
+      Alert.alert('Error', 'Failed to process your request. Please try again.');
+      setConsentLoading(false);
     }
   };
 
@@ -122,22 +136,6 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) =
           </View>
         </View>
 
-        {/* User Selection Dropdown */}
-        <View style={styles.userSelectionContainer}>
-          <Text style={styles.userSelectionLabel}>Select User:</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedUser}
-              onValueChange={(itemValue: string) => setSelectedUser(itemValue)}
-              style={styles.picker}
-            >
-              {TEST_USERS.map((user) => (
-                <Picker.Item key={user.id} label={user.label} value={user.id} />
-              ))}
-            </Picker>
-          </View>
-        </View>
-
         {/* Error Message */}
         {error && (
           <View style={styles.errorContainer}>
@@ -148,15 +146,15 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) =
         {/* Sign In Button */}
         <Pressable
           style={[styles.signInButton, loading && styles.signInButtonDisabled]}
-          onPress={handleSignIn}
+          onPress={handlePolarLogin}
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
             <>
-              <Text style={styles.googleIcon}>�</Text>
-              <Text style={styles.signInText}>Get Started</Text>
+              <Text style={styles.polarIcon}>❄️</Text>
+              <Text style={styles.signInText}>Log in with Polar Flow</Text>
             </>
           )}
         </Pressable>
@@ -166,6 +164,14 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) =
           By signing in, you agree to our Terms of Service
         </Text>
       </View>
+
+      {/* Consent Modal */}
+      <ConsentModal
+        visible={showConsentModal}
+        onConsent={handleConsentAccept}
+        onDecline={handleConsentDecline}
+        loading={consentLoading}
+      />
     </View>
   );
 };
@@ -215,29 +221,6 @@ const styles = StyleSheet.create({
     color: '#374151',
     flex: 1,
   },
-  userSelectionContainer: {
-    marginVertical: 20,
-  },
-  userSelectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  pickerContainer: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    overflow: 'hidden',
-    justifyContent: 'center',
-    paddingVertical: 4,
-  },
-  picker: {
-    color:'#ffffff',
-    height: 56,
-    marginVertical: -8,
-  },
   errorContainer: {
     backgroundColor: '#FEE2E2',
     borderRadius: 8,
@@ -251,8 +234,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signInButton: {
-    backgroundColor: '#3B82F6',
-    paddingVertical: 14,
+    backgroundColor: '#007AFF', // Polar Blue
+    paddingVertical: 16,
     paddingHorizontal: 24,
     borderRadius: 12,
     flexDirection: 'row',
@@ -271,12 +254,12 @@ const styles = StyleSheet.create({
   signInButtonDisabled: {
     opacity: 0.7,
   },
-  googleIcon: {
+  polarIcon: {
     fontSize: 20,
   },
   signInText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
   },
   termsText: {

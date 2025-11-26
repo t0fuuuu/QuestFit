@@ -154,16 +154,6 @@ export default function TabLayout() {
         ),
         headerRight: () => (
           <View style={styles.headerRightContainer}>
-            {!hasPolarToken && (
-              <Pressable 
-                style={styles.polarButton} 
-                onPress={handleLinkPolar}
-              >
-                <Text style={styles.polarButtonText}>
-                  Link Polar
-                </Text>
-              </Pressable>
-            )}
             <Pressable style={styles.signOutButton} onPress={handleSignOut}>
               <Text style={styles.signOutText}>Sign Out</Text>
             </Pressable>

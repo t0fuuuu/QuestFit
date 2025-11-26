@@ -106,6 +106,85 @@ class PolarOAuthService {
   }
 
   /**
+   * Handle the full Polar login flow
+   * 1. Start OAuth
+   * 2. Get Tokens & Polar User ID
+   * 3. Check if user exists in Firebase
+   * 4. Create/Update user document
+   * 5. Return user info
+   */
+  async login(): Promise<{ user: any; isNewUser: boolean } | null> {
+    try {
+      const redirectUri = 'https://questfit-pi.vercel.app';
+      const authUrl = this.getAuthorizationUrl();
+      
+      // Open browser for OAuth
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+
+      if (result.type === 'success' && result.url) {
+        const url = new URL(result.url);
+        const code = url.searchParams.get('code');
+        
+        if (code) {
+          // Exchange code for tokens
+          const tokens = await this.exchangeCodeForToken(code);
+          
+          if (tokens && tokens.polarUserId) {
+            const polarUserId = tokens.polarUserId.toString(); // Ensure string
+            const userDocRef = doc(db, 'users', polarUserId);
+            const userDoc = await getDoc(userDocRef);
+            
+            let isNewUser = false;
+
+            if (!userDoc.exists()) {
+              // Create new user
+              isNewUser = true;
+              await setDoc(userDocRef, {
+                userId: polarUserId,
+                polarUserId: polarUserId,
+                polarAccessToken: tokens.accessToken,
+                username: `Polar User ${polarUserId.slice(-4)}`,
+                displayName: 'Polar Athlete',
+                level: 1,
+                xp: 0,
+                totalWorkouts: 0,
+                totalCalories: 0,
+                totalDistance: 0,
+                capturedCreatures: [],
+                achievements: [],
+                createdAt: new Date(),
+                consent: false, // Will be set to true after consent modal
+              });
+            } else {
+              // Update existing user tokens
+              await updateDoc(userDocRef, {
+                polarAccessToken: tokens.accessToken,
+                polarUserId: polarUserId,
+                lastLogin: new Date(),
+              });
+            }
+
+            // Register with Polar AccessLink
+            await this.registerPolarUser(tokens.accessToken, polarUserId, polarUserId);
+
+            return {
+              user: {
+                uid: polarUserId,
+                displayName: userDoc.exists() ? userDoc.data().displayName : 'Polar Athlete',
+              },
+              isNewUser
+            };
+          }
+        }
+      }
+      return null;
+    } catch (error) {
+      console.error('Error during Polar login:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Start the OAuth flow using expo-web-browser
    * This handles the entire OAuth flow and returns the tokens
    */
@@ -255,18 +334,31 @@ class PolarOAuthService {
       const age = physicalData.birthdate ? this.calculateAge(physicalData.birthdate) : null;
       const gender = physicalData.gender || null;
       
+      // Extract and combine names for display name
+      const firstName = physicalData['first-name'] || '';
+      const lastName = physicalData['last-name'] || '';
+      const displayName = `${firstName} ${lastName}`.trim();
+
       console.log('Parsed data - Weight:', weight, 'Age:', age, 'Gender:', gender);
+      if (displayName) console.log('Parsed name:', displayName);
       
       // Store in users collection
       const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
+      const updates: any = {
         weight: weight,
         age: age,
         gender: gender,
         updatedAt: new Date(),
-      });
+      };
 
-      console.log('✅ User physical data stored successfully in Firebase');
+      // Only update display name if we got a valid one from Polar
+      if (displayName) {
+        updates.displayName = displayName;
+      }
+
+      await updateDoc(userRef, updates);
+
+      console.log('✅ User physical data and profile stored successfully in Firebase');
       
     } catch (error) {
       console.error('❌ Error fetching user physical data:', error);
