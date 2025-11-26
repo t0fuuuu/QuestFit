@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
+import { IS_DEV_MODE, DEV_POLAR_USER_ID } from '@/constants/DevConfig';
 
 // Enable web browser to be dismissed when OAuth flow completes
 WebBrowser.maybeCompleteAuthSession();
@@ -122,6 +123,58 @@ class PolarOAuthService {
    */
   async login(): Promise<{ user: any; isNewUser: boolean; tokens?: PolarUserTokens } | null> {
     try {
+      if (IS_DEV_MODE) {
+        console.log('🔧 DEV MODE: Skipping OAuth flow, using hardcoded user ID:', DEV_POLAR_USER_ID);
+        const polarUserId = DEV_POLAR_USER_ID;
+        const userDocRef = doc(db, 'users', polarUserId);
+        const userDoc = await getDoc(userDocRef);
+
+        // Mock tokens for dev mode
+        const mockTokens: PolarUserTokens = {
+          accessToken: 'mock_access_token',
+          tokenType: 'bearer',
+          expiresIn: 3600,
+          polarUserId: polarUserId,
+          linkedAt: new Date(),
+        };
+
+        if (!userDoc.exists()) {
+          return {
+            user: {
+              uid: polarUserId,
+              displayName: 'Dev Polar Athlete',
+            },
+            isNewUser: true,
+            tokens: mockTokens
+          };
+        } else {
+          const userData = userDoc.data();
+          if (!userData.consent) {
+             return {
+              user: {
+                uid: polarUserId,
+                displayName: userData.displayName || 'Dev Polar Athlete',
+              },
+              isNewUser: true,
+              tokens: mockTokens
+            };
+          }
+          
+          // Update last login
+          await updateDoc(userDocRef, {
+            lastLogin: new Date(),
+          });
+
+          return {
+            user: {
+              uid: polarUserId,
+              displayName: userData.displayName || 'Dev Polar Athlete',
+            },
+            isNewUser: false
+          };
+        }
+      }
+
       // Determine redirect URI based on platform for the token exchange
       let redirectUri = 'https://questfit-pi.vercel.app';
       if (Platform.OS !== 'web') {
@@ -362,6 +415,11 @@ class PolarOAuthService {
    */
   async registerPolarUser(accessToken: string, userId: string, polarUserId: string): Promise<string | null> {
     try {
+      if (IS_DEV_MODE) {
+        console.log('🔧 DEV MODE: Skipping Polar registration');
+        return await this.getUserPhysicalData(accessToken, polarUserId, userId);
+      }
+
       const response = await axios.post(
         'https://questfit-pi.vercel.app/api/polar/register-user',
         {
@@ -385,6 +443,20 @@ class PolarOAuthService {
    */
   async getUserPhysicalData(accessToken: string, polarUserId: string, userId: string): Promise<string | null> {
     try {
+      if (IS_DEV_MODE) {
+        console.log('🔧 DEV MODE: Mocking user physical data');
+        // Mock data
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          weight: 75,
+          age: 30,
+          gender: 'MALE',
+          updatedAt: new Date(),
+          displayName: 'Dev Polar Athlete'
+        });
+        return 'Dev Polar Athlete';
+      }
+
       console.log('Fetching user physical data from Polar via API...');
       
       // Call our backend API endpoint to avoid CORS issues
@@ -537,7 +609,7 @@ class PolarOAuthService {
       const polarUserId = userDoc.exists() ? userDoc.data()?.polarUserId : null;
 
       // Delete user from Polar AccessLink API via backend
-      if (accessToken && polarUserId) {
+      if (accessToken && polarUserId && !IS_DEV_MODE) {
         try {
           await axios.delete(
             'https://questfit-pi.vercel.app/api/polar/disconnect-user',
