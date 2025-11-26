@@ -3,7 +3,8 @@
     {
       "id": "001",
       "name": "Thunder Wolf",
-      "type": "rare",
+      "rarity": "rare",
+      "sport": "RUNNING",
       "description": "A swift predator that runs with lightning speed through mountain trails.",
       "image": "",
       "animation": "",
@@ -15,7 +16,6 @@
       "unlockRequirements": {
         "minCalories": 400,
         "minDuration": 30,
-        "sport": "RUNNING",
         "description": "Complete a 30+ minute run burning 400+ calories"
       },
       "xPReward": 150,
@@ -24,7 +24,7 @@
     {
       "id": "002",
       "name": "Flame Phoenix",
-      "type": "epic",
+      "rarity": "epic",
       "description": "A majestic bird of fire that rises from intense training sessions.",
       "image": "",
       "animation": "",
@@ -44,7 +44,8 @@
     {
       "id": "003",
       "name": "Aqua Serpent",
-      "type": "common",
+      "rarity": "common",
+      "sport": "SWIMMING",
       "description": "A graceful water creature that emerges during swimming sessions.",
       "image": "",
       "animation": "",
@@ -55,7 +56,6 @@
       },
       "unlockRequirements": {
         "minCalories": 200,
-        "sport": "SWIMMING",
         "description": "Complete a swimming workout burning 200+ calories"
       },
       "xPReward": 75,
@@ -64,7 +64,7 @@
     {
       "id": "004",
       "name": "Golden Dragon",
-      "type": "legendary",
+      "rarity": "legendary",
       "description": "The ultimate prize for elite athletes who push beyond their limits.",
       "image": "",
       "animation": "",
@@ -84,7 +84,8 @@
     {
       "id": "005",
       "name": "Forest Spirit",
-      "type": "common",
+      "rarity": "common",
+      "sport": "HIKING",
       "description": "A gentle creature that appears during peaceful nature walks.",
       "image": "",
       "animation": "",
@@ -96,7 +97,6 @@
       "unlockRequirements": {
         "minCalories": 250,
         "minDuration": 45,
-        "sport": "HIKING",
         "description": "Complete a 45+ minute hike burning 250+ calories"
       },
       "xPReward": 100,
@@ -105,7 +105,8 @@
     {
       "id": "006",
       "name": "Iron Titan",
-      "type": "rare",
+      "rarity": "rare",
+      "sport": "FITNESS",
       "description": "A powerful being forged in the fires of intense strength training.",
       "image": "",
       "animation": "",
@@ -117,7 +118,6 @@
       "unlockRequirements": {
         "minCalories": 500,
         "minDuration": 50,
-        "sport": "FITNESS",
         "description": "Complete a 50+ minute fitness workout burning 500+ calories"
       },
       "xPReward": 180,
@@ -126,7 +126,8 @@
     {
       "id": "007",
       "name": "Wind Falcon",
-      "type": "common",
+      "rarity": "common",
+      "sport": "CYCLING",
       "description": "A swift bird that soars alongside cyclists on their journeys.",
       "image": "",
       "animation": "",
@@ -138,7 +139,6 @@
       "unlockRequirements": {
         "minCalories": 300,
         "minDuration": 25,
-        "sport": "CYCLING",
         "description": "Complete a 25+ minute cycling ride burning 300+ calories"
       },
       "xPReward": 90,
@@ -147,7 +147,7 @@
     {
       "id": "008",
       "name": "Crystal Guardian",
-      "type": "epic",
+      "rarity": "epic",
       "description": "A mystical protector that appears after sustained cardiovascular excellence.",
       "image": "",
       "animation": "",
@@ -167,7 +167,8 @@
     {
       "id": "009",
       "name": "Shadow Panther",
-      "type": "rare",
+      "rarity": "rare",
+      "sport": "RUNNING",
       "description": "A stealthy predator that appears during night runs.",
       "image": "",
       "animation": "",
@@ -179,7 +180,6 @@
       "unlockRequirements": {
         "minCalories": 450,
         "minDuration": 35,
-        "sport": "RUNNING",
         "description": "Complete a 35+ minute run burning 450+ calories"
       },
       "xPReward": 160,
@@ -188,7 +188,8 @@
     {
       "id": "010",
       "name": "Boulder Bear",
-      "type": "common",
+      "rarity": "common",
+      "sport": "HIKING",
       "description": "A sturdy companion for those who enjoy mountain hiking.",
       "image": "",
       "animation": "",
@@ -200,7 +201,6 @@
       "unlockRequirements": {
         "minCalories": 300,
         "minDuration": 60,
-        "sport": "HIKING",
         "description": "Complete a 60+ minute hike burning 300+ calories"
       },
       "xPReward": 110,

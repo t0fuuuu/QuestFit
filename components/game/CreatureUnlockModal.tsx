@@ -23,7 +23,7 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
 }) => {
   if (creatures.length === 0) return null;
 
-  const getRarityColor = (type: Creature['type']) => {
+  const getRarityColor = (type: Creature['rarity']) => {
     switch (type) {
       case 'common': return '#9CA3AF';
       case 'rare': return '#3B82F6';
@@ -51,7 +51,7 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
                 key={creature.id} 
                 style={[
                   styles.creatureCard,
-                  { borderColor: getRarityColor(creature.type) }
+                  { borderColor: getRarityColor(creature.rarity) }
                 ]}
               >
                 <View style={styles.creatureHeader}>
@@ -59,10 +59,10 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
                   <Text 
                     style={[
                       styles.rarityBadge,
-                      { backgroundColor: getRarityColor(creature.type) }
+                      { backgroundColor: getRarityColor(creature.rarity) }
                     ]}
                   >
-                    {creature.type.toUpperCase()}
+                    {creature.rarity.toUpperCase()}
                   </Text>
                 </View>
 

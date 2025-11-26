@@ -9,7 +9,7 @@ interface CreatureCardProps {
 }
 
 export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, captured = false }) => {
-  const getRarityColor = (type: Creature['type']) => {
+  const getRarityColor = (type: Creature['rarity']) => {
     switch (type) {
       case 'common': return '#9CA3AF';
       case 'rare': return '#3B82F6';
@@ -21,13 +21,13 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
 
   return (
     <Pressable 
-      style={[styles.container, { borderColor: getRarityColor(creature.type) }]}
+      style={[styles.container, { borderColor: getRarityColor(creature.rarity) }]}
       onPress={onPress}
     >
       <View style={styles.header}>
         <Text style={styles.name}>{creature.name}</Text>
-        <Text style={[styles.rarity, { color: getRarityColor(creature.type) }]}>
-          {creature.type.toUpperCase()}
+        <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
+          {creature.rarity.toUpperCase()}
         </Text>
       </View>
       
@@ -54,17 +54,17 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
 
       <View style={styles.requirements}>
         <Text style={styles.requirementsTitle}>Requirements:</Text>
-        {creature.requiredWorkout.minCalories && (
-          <Text style={styles.requirement}>• {creature.requiredWorkout.minCalories} calories</Text>
+        {creature.unlockRequirements.minCalories && (
+          <Text style={styles.requirement}>• {creature.unlockRequirements.minCalories} calories</Text>
         )}
-        {creature.requiredWorkout.minDistance && (
-          <Text style={styles.requirement}>• {(creature.requiredWorkout.minDistance / 1000).toFixed(1)}km distance</Text>
+        {creature.unlockRequirements.minDistance && (
+          <Text style={styles.requirement}>• {(creature.unlockRequirements.minDistance / 1000).toFixed(1)}km distance</Text>
         )}
-        {creature.requiredWorkout.minDuration && (
-          <Text style={styles.requirement}>• {creature.requiredWorkout.minDuration} minutes</Text>
+        {creature.unlockRequirements.minDuration && (
+          <Text style={styles.requirement}>• {creature.unlockRequirements.minDuration} minutes</Text>
         )}
-        {creature.requiredWorkout.sport && (
-          <Text style={styles.requirement}>• {creature.requiredWorkout.sport.toLowerCase()} workout</Text>
+        {creature.sport != 'NEUTRAL' && (
+          <Text style={styles.requirement}>• {creature.sport} workout</Text>
         )}
       </View>
     </Pressable>
