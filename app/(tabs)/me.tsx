@@ -128,8 +128,8 @@ export default function XPManagementScreen() {
     }
   };
 
-  const getRarityColor = (type: Creature['type']) => {
-    switch (type) {
+  const getRarityColor = (rarity: Creature['rarity']) => {
+    switch (rarity) {
       case 'common': return '#9CA3AF';
       case 'rare': return '#3B82F6';
       case 'epic': return '#8B5CF6';
@@ -369,12 +369,12 @@ export default function XPManagementScreen() {
                   key={`${creature.id}-${index}`} 
                   style={[
                     styles.creatureCard,
-                    { borderLeftColor: getRarityColor(creature.type) }
+                    { borderLeftColor: getRarityColor(creature.rarity) }
                   ]}
                 >
                   <Text style={styles.creatureName}>{creature.name}</Text>
-                  <Text style={[styles.creatureRarity, { color: getRarityColor(creature.type) }]}>
-                    {creature.type.toUpperCase()}
+                  <Text style={[styles.creatureRarity, { color: getRarityColor(creature.rarity) }]}>
+                    {creature.rarity.toUpperCase()}
                   </Text>
                   <View style={styles.creatureStats}>
                     <Text style={styles.creatureStat}>⚔️ {creature.stats.power}</Text>
