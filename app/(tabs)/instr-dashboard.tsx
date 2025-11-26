@@ -39,7 +39,7 @@ export default function InstructorDashboard() {
   const { selectedUserIds, loading: studentsLoading, toggleUser } = useInstructorStudents(user?.uid);
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [allUsers, setAllUsers] = useState<string[]>([]);
+  const [allUsers, setAllUsers] = useState<{id: string, displayName: string}[]>([]);
   const [userOverviews, setUserOverviews] = useState<Map<string, UserOverview>>(new Map());
   const [loadingOverviews, setLoadingOverviews] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,8 +60,11 @@ export default function InstructorDashboard() {
   const loadAllUsers = async () => {
     try {
       const usersSnapshot = await getDocs(collection(db, 'users'));
-      const userIds = usersSnapshot.docs.map(doc => doc.id);
-      setAllUsers(userIds);
+      const users = usersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        displayName: doc.data().displayName || doc.id
+      }));
+      setAllUsers(users);
     } catch (error) {
       console.error('Error loading users:', error);
     }
@@ -187,8 +190,9 @@ export default function InstructorDashboard() {
     setRefreshing(false);
   };
 
-  const filteredUsers = allUsers.filter(userId =>
-    userId.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = allUsers.filter(user =>
+    user.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (instructorLoading || studentsLoading) {
@@ -233,17 +237,20 @@ export default function InstructorDashboard() {
         />
 
         <ScrollView style={styles.userList}>
-          {filteredUsers.map(userId => (
+          {filteredUsers.map(user => (
             <Pressable
-              key={userId}
+              key={user.id}
               style={[
                 styles.userItem,
-                selectedUserIds.includes(userId) && styles.userItemSelected,
+                selectedUserIds.includes(user.id) && styles.userItemSelected,
               ]}
-              onPress={() => toggleUser(userId)}
+              onPress={() => toggleUser(user.id)}
             >
-              <Text style={styles.userIdText}>{userId}</Text>
-              {selectedUserIds.includes(userId) && (
+              <View>
+                <Text style={styles.userNameText}>{user.displayName}</Text>
+                <Text style={styles.userIdSubText}>{user.id}</Text>
+              </View>
+              {selectedUserIds.includes(user.id) && (
                 <Text style={styles.checkmark}>✓</Text>
               )}
             </Pressable>
@@ -287,6 +294,9 @@ export default function InstructorDashboard() {
         <View style={styles.overviewsContainer}>
           {selectedUserIds.map(userId => {
             const overview = userOverviews.get(userId);
+            const user = allUsers.find(u => u.id === userId);
+            const displayName = user?.displayName || userId;
+            
             return (
               <Pressable
                 key={userId}
@@ -294,7 +304,10 @@ export default function InstructorDashboard() {
                 onPress={() => router.push(`/instructor/user-detail?userId=${userId}`)}
               >
                 <View style={styles.userCardHeader}>
-                  <Text style={styles.userCardId}>{userId}</Text>
+                  <View>
+                    <Text style={styles.userCardName}>{displayName}</Text>
+                    <Text style={styles.userCardId}>{userId}</Text>
+                  </View>
                   {overview?.lastSync && (
                     <Text style={styles.lastSync}>
                       Last sync: {new Date(overview.lastSync).toLocaleTimeString()}
@@ -441,9 +454,14 @@ const styles = StyleSheet.create({
     borderColor: '#FF6B35',
     borderWidth: 2,
   },
-  userIdText: {
+  userNameText: {
     color: '#000000',
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  userIdSubText: {
+    color: '#666',
+    fontSize: 12,
   },
   checkmark: {
     color: '#4CAF50',
@@ -491,10 +509,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  userCardId: {
+  userCardName: {
     color: '#000000',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  userCardId: {
+    color: '#666',
+    fontSize: 12,
   },
   lastSync: {
     color: '#666',

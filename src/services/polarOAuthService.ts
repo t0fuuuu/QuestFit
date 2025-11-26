@@ -2,6 +2,7 @@ import axios from 'axios';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 
 // Enable web browser to be dismissed when OAuth flow completes
 WebBrowser.maybeCompleteAuthSession();
@@ -48,7 +49,7 @@ interface PolarTokenResponse {
   x_user_id?: string;
 }
 
-interface PolarUserTokens {
+export interface PolarUserTokens {
   accessToken: string;
   tokenType: string;
   expiresIn?: number;
@@ -96,8 +97,14 @@ class PolarOAuthService {
    * Returns the URL to redirect the user to
    */
   getAuthorizationUrl(): string {
-    // Don't encode the redirect_uri - Polar expects it unencoded
-    const redirectUri = 'https://questfit-pi.vercel.app';
+    // Determine redirect URI based on platform
+    let redirectUri = 'https://questfit-pi.vercel.app';
+    
+    if (Platform.OS !== 'web') {
+      // On mobile, use the Vercel function that redirects to the app scheme
+      redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+    }
+    
     // Request all available scopes including webhook management
     const scope = "accesslink.read_all";
     const url = `${POLAR_AUTH_URL}?response_type=code&client_id=${POLAR_CLIENT_ID}&redirect_uri=${redirectUri}&scope=${scope}`;
@@ -113,13 +120,21 @@ class PolarOAuthService {
    * 4. Create/Update user document
    * 5. Return user info
    */
-  async login(): Promise<{ user: any; isNewUser: boolean } | null> {
+  async login(): Promise<{ user: any; isNewUser: boolean; tokens?: PolarUserTokens } | null> {
     try {
-      const redirectUri = 'https://questfit-pi.vercel.app';
+      // Determine redirect URI based on platform for the token exchange
+      let redirectUri = 'https://questfit-pi.vercel.app';
+      if (Platform.OS !== 'web') {
+        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+      }
+
       const authUrl = this.getAuthorizationUrl();
       
       // Open browser for OAuth
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      // On mobile, we expect the redirect to come back to questfit://oauth/polar
+      // The second argument is the deep link that the browser will redirect to
+      const deepLink = Platform.OS === 'web' ? redirectUri : 'questfit://oauth/polar';
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, deepLink);
 
       if (result.type === 'success' && result.url) {
         const url = new URL(result.url);
@@ -137,25 +152,33 @@ class PolarOAuthService {
             let isNewUser = false;
 
             if (!userDoc.exists()) {
-              // Create new user
+              // DO NOT create user yet. Wait for consent.
               isNewUser = true;
-              await setDoc(userDocRef, {
-                userId: polarUserId,
-                polarUserId: polarUserId,
-                polarAccessToken: tokens.accessToken,
-                username: `Polar User ${polarUserId.slice(-4)}`,
-                displayName: 'Polar Athlete',
-                level: 1,
-                xp: 0,
-                totalWorkouts: 0,
-                totalCalories: 0,
-                totalDistance: 0,
-                capturedCreatures: [],
-                achievements: [],
-                createdAt: new Date(),
-                consent: false, // Will be set to true after consent modal
-              });
+              return {
+                user: {
+                  uid: polarUserId,
+                  displayName: 'Polar Athlete',
+                },
+                isNewUser,
+                tokens // Return tokens so we can create user later
+              };
             } else {
+              // Check if consent was previously given
+              const userData = userDoc.data();
+              if (!userData.consent) {
+                // User exists but hasn't consented yet (e.g. reloaded page during consent flow)
+                // In this case, we treat them as new again to force consent
+                isNewUser = true;
+                return {
+                  user: {
+                    uid: polarUserId,
+                    displayName: userData.displayName || 'Polar Athlete',
+                  },
+                  isNewUser,
+                  tokens
+                };
+              }
+
               // Update existing user tokens
               await updateDoc(userDocRef, {
                 polarAccessToken: tokens.accessToken,
@@ -163,9 +186,6 @@ class PolarOAuthService {
                 lastLogin: new Date(),
               });
             }
-
-            // Register with Polar AccessLink
-            await this.registerPolarUser(tokens.accessToken, polarUserId, polarUserId);
 
             return {
               user: {
@@ -185,21 +205,65 @@ class PolarOAuthService {
   }
 
   /**
+   * Create user document after consent is given
+   */
+  async createUserAfterConsent(userId: string, tokens: PolarUserTokens): Promise<{ displayName: string }> {
+    try {
+      const userDocRef = doc(db, 'users', userId);
+      
+      // Initial creation with default name
+      await setDoc(userDocRef, {
+        userId: userId,
+        polarUserId: userId,
+        polarAccessToken: tokens.accessToken,
+        username: `Polar User ${userId.slice(-4)}`,
+        displayName: 'Polar Athlete',
+        level: 1,
+        xp: 0,
+        totalWorkouts: 0,
+        totalCalories: 0,
+        totalDistance: 0,
+        capturedCreatures: [],
+        achievements: [],
+        createdAt: new Date(),
+        consent: true,
+        consentGivenAt: new Date(),
+      });
+
+      console.log('✅ User created with consent:', userId);
+
+      // Register with Polar AccessLink and get real name
+      const displayName = await this.registerPolarUser(tokens.accessToken, userId, userId);
+      
+      return { displayName: displayName || 'Polar Athlete' };
+    } catch (error) {
+      console.error('Error creating user after consent:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Start the OAuth flow using expo-web-browser
    * This handles the entire OAuth flow and returns the tokens
    */
   async startOAuthFlow(userId: string): Promise<PolarUserTokens | null> {
     try {
-      const redirectUri = 'https://questfit-pi.vercel.app';
+      // Determine redirect URI based on platform
+      let redirectUri = 'https://questfit-pi.vercel.app';
+      if (Platform.OS !== 'web') {
+        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+      }
+
       const authUrl = this.getAuthorizationUrl();
       
     //   console.log('Opening Polar authorization URL...');
     //   console.log('Auth URL:', authUrl);
       
       // Open the browser for OAuth with automatic code capture
+      const deepLink = Platform.OS === 'web' ? redirectUri : 'questfit://oauth/polar';
       const result = await WebBrowser.openAuthSessionAsync(
         authUrl,
-        redirectUri
+        deepLink
       );
 
       //console.log('OAuth result:', result);
@@ -240,12 +304,19 @@ class PolarOAuthService {
     //   console.log('Exchanging authorization code for access token...');
       console.log('Authorization Code:', code);
       
+      // Determine redirect URI based on platform for the token exchange
+      // This MUST match what was sent in the authorization request
+      let redirectUri = 'https://questfit-pi.vercel.app';
+      if (Platform.OS !== 'web') {
+        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+      }
+
       const response = await axios.post<PolarTokenResponse>(
         POLAR_TOKEN_URL,
         new URLSearchParams({
           grant_type: 'authorization_code',
           code: code,
-          redirect_uri: 'https://questfit-pi.vercel.app',
+          redirect_uri: redirectUri,
         }).toString(),
         {
           headers: {
@@ -289,7 +360,7 @@ class PolarOAuthService {
   /**
    * Register user with Polar AccessLink API via backend
    */
-  async registerPolarUser(accessToken: string, userId: string, polarUserId: string): Promise<boolean> {
+  async registerPolarUser(accessToken: string, userId: string, polarUserId: string): Promise<string | null> {
     try {
       const response = await axios.post(
         'https://questfit-pi.vercel.app/api/polar/register-user',
@@ -301,20 +372,18 @@ class PolarOAuthService {
 
       console.log('✅ Successfully registered with Polar AccessLink');
       
-      // Fetch and store physical data
-      await this.getUserPhysicalData(accessToken, polarUserId, userId);
-      
-      return true;
+      // Fetch and store physical data, return the display name
+      return await this.getUserPhysicalData(accessToken, polarUserId, userId);
     } catch (error) {
       console.error('❌ Registration error:', error);
-      return false;
+      return null;
     }
   }
 
   /**
    * Get user physical data from Polar AccessLink API and store in Firebase
    */
-  async getUserPhysicalData(accessToken: string, polarUserId: string, userId: string): Promise<void> {
+  async getUserPhysicalData(accessToken: string, polarUserId: string, userId: string): Promise<string | null> {
     try {
       console.log('Fetching user physical data from Polar via API...');
       
@@ -359,6 +428,7 @@ class PolarOAuthService {
       await updateDoc(userRef, updates);
 
       console.log('✅ User physical data and profile stored successfully in Firebase');
+      return displayName || null;
       
     } catch (error) {
       console.error('❌ Error fetching user physical data:', error);
@@ -368,6 +438,7 @@ class PolarOAuthService {
         console.error('Response headers:', error.response?.headers);
         console.error('Request URL:', error.config?.url);
       }
+      return null;
     }
   }
 
@@ -401,9 +472,10 @@ class PolarOAuthService {
       console.log('Polar User ID:', tokens.polarUserId);
       
       // Register user with Polar AccessLink API
-      if (tokens.polarUserId) {
+      // Moved to setConsentGiven to ensure we don't fetch data before consent
+      /* if (tokens.polarUserId) {
         await this.registerPolarUser(tokens.accessToken, userId, tokens.polarUserId);
-      }
+      } */
     } catch (error) {
       console.error('Error storing Polar tokens:', error);
       throw error;
@@ -416,6 +488,17 @@ class PolarOAuthService {
   async setConsentGiven(userId: string): Promise<void> {
     try {
       const userRef = doc(db, 'users', userId);
+      
+      // Fetch tokens to register with Polar now that we have consent
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        if (data.polarAccessToken && data.polarUserId) {
+          console.log('Consent given, registering with Polar AccessLink...');
+          await this.registerPolarUser(data.polarAccessToken, userId, data.polarUserId);
+        }
+      }
+
       await updateDoc(userRef, {
         consent: true,
         consentGivenAt: new Date(),

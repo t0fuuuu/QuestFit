@@ -1,10 +1,27 @@
-import { Platform, View, StyleSheet, ScrollView, Image } from 'react-native';
+import { Platform, View, StyleSheet, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { Redirect, Link } from 'expo-router';
 import { Text } from '@/components/Themed';
+import { useAuth } from '@/src/hooks/useAuth';
 
 export default function Index() {
+  const { user, loading } = useAuth();
+
   // On mobile, redirect to home tab
   if (Platform.OS !== 'web') {
+    return <Redirect href="/home" />;
+  }
+
+  // Show loading state to prevent flash of landing page
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#3B82F6" />
+      </View>
+    );
+  }
+
+  // If user is logged in, redirect to home tab
+  if (user) {
     return <Redirect href="/home" />;
   }
   
