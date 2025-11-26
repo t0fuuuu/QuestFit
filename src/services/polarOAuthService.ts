@@ -319,6 +319,39 @@ class PolarOAuthService {
   }
 
   /**
+   * Set consent flag to true in Firebase
+   */
+  async setConsentGiven(userId: string): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', userId);
+      await updateDoc(userRef, {
+        consent: true,
+        consentGivenAt: new Date(),
+      });
+      console.log('✅ Consent flag set to true for user:', userId);
+    } catch (error) {
+      console.error('Error setting consent:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user has given consent
+   */
+  async hasConsentGiven(userId: string): Promise<boolean> {
+    try {
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      if (userDoc.exists()) {
+        return userDoc.data()?.consent === true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error checking consent:', error);
+      return false;
+    }
+  }
+
+  /**
    * Disconnect Polar account - Delete from Polar API and remove from Firebase
    */
   async disconnectPolarAccount(userId: string): Promise<void> {
@@ -346,7 +379,7 @@ class PolarOAuthService {
         }
       }
 
-      // Remove all Polar data from Firebase
+      // Remove all Polar data from Firebase and set consent to false
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
         polarAccessToken: null,
@@ -354,9 +387,10 @@ class PolarOAuthService {
         weight: null,
         age: null,
         gender: null,
+        consent: false, // Reset consent when disconnecting
       });
 
-      console.log('Polar account disconnected');
+      console.log('Polar account disconnected and consent revoked');
     } catch (error) {
       console.error('Error disconnecting Polar account:', error);
       throw error;

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { Text } from '@/components/Themed';
 import { polarOAuthService } from '@/src/services/polarOAuthService';
+import { ConsentModal } from './ConsentModal';
 import { useRouter } from 'expo-router';
 
 interface PolarLinkScreenProps {
@@ -16,6 +17,8 @@ export const PolarLinkScreen: React.FC<PolarLinkScreenProps> = ({
   onSkip 
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
   const router = useRouter();
 
   const handleLinkPolar = async () => {
@@ -27,18 +30,8 @@ export const PolarLinkScreen: React.FC<PolarLinkScreenProps> = ({
 
       if (result) {
         console.log('✅ Polar account linked successfully!');
-        Alert.alert(
-          'Success!',
-          'Your Polar Flow account has been linked successfully.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                onLinkSuccess?.();
-              }
-            }
-          ]
-        );
+        // Show consent modal instead of alert
+        setShowConsentModal(true);
       } else {
         console.log('❌ Polar linking failed or was cancelled');
         Alert.alert(
@@ -67,6 +60,55 @@ export const PolarLinkScreen: React.FC<PolarLinkScreenProps> = ({
     }
   };
 
+  const handleConsentAccept = async () => {
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.setConsentGiven(userId);
+      setShowConsentModal(false);
+      
+      Alert.alert(
+        'Success!',
+        'Your Polar account has been linked and you have consented to data usage.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              onLinkSuccess?.();
+            }
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error setting consent:', error);
+      Alert.alert('Error', 'Failed to save consent. Please try again.');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  const handleConsentDecline = async () => {
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.disconnectPolarAccount(userId);
+      setShowConsentModal(false);
+      
+      Alert.alert(
+        'Consent Declined',
+        'Your Polar account has been disconnected. You can link it again anytime.',
+        [
+          {
+            text: 'OK',
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error declining consent:', error);
+      Alert.alert('Error', 'Failed to process your request. Please try again.');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
   const handleSkip = () => {
     Alert.alert(
       'Skip Polar Linking?',
@@ -88,94 +130,104 @@ export const PolarLinkScreen: React.FC<PolarLinkScreenProps> = ({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.icon}>🏃‍♂️</Text>
-          <Text style={styles.title}>Link Your Polar Account</Text>
-          <Text style={styles.subtitle}>
-            Connect your Polar Flow account to unlock real-time heart rate tracking and enhance your workout experience.
-          </Text>
-        </View>
+    <>
+      <View style={styles.container}>
+        <View style={styles.content}>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.icon}>🏃‍♂️</Text>
+            <Text style={styles.title}>Link Your Polar Account</Text>
+            <Text style={styles.subtitle}>
+              Connect your Polar Flow account to unlock real-time heart rate tracking and enhance your workout experience.
+            </Text>
+          </View>
 
-        {/* Benefits */}
-        <View style={styles.benefits}>
-          <Text style={styles.benefitsTitle}>Why Link?</Text>
-          
-          <View style={styles.benefit}>
-            <Text style={styles.benefitIcon}>📊</Text>
-            <View style={styles.benefitText}>
-              <Text style={styles.benefitTitle}>Real-Time Heart Rate</Text>
-              <Text style={styles.benefitDescription}>
-                Track your heart rate live during workouts
-              </Text>
+          {/* Benefits */}
+          <View style={styles.benefits}>
+            <Text style={styles.benefitsTitle}>Why Link?</Text>
+            
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>📊</Text>
+              <View style={styles.benefitText}>
+                <Text style={styles.benefitTitle}>Real-Time Heart Rate</Text>
+                <Text style={styles.benefitDescription}>
+                  Track your heart rate live during workouts
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>🎯</Text>
+              <View style={styles.benefitText}>
+                <Text style={styles.benefitTitle}>Training Zones</Text>
+                <Text style={styles.benefitDescription}>
+                  Optimize your workouts with heart rate zone tracking
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>📈</Text>
+              <View style={styles.benefitText}>
+                <Text style={styles.benefitTitle}>Workout History</Text>
+                <Text style={styles.benefitDescription}>
+                  Access your complete workout history from Polar Flow
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.benefit}>
+              <Text style={styles.benefitIcon}>🐉</Text>
+              <View style={styles.benefitText}>
+                <Text style={styles.benefitTitle}>Unlock Creatures</Text>
+                <Text style={styles.benefitDescription}>
+                  Capture more creatures with accurate heart rate data
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.benefit}>
-            <Text style={styles.benefitIcon}>🎯</Text>
-            <View style={styles.benefitText}>
-              <Text style={styles.benefitTitle}>Training Zones</Text>
-              <Text style={styles.benefitDescription}>
-                Optimize your workouts with heart rate zone tracking
-              </Text>
-            </View>
+          {/* Action Buttons */}
+          <View style={styles.actions}>
+            <Pressable
+              style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
+              onPress={handleLinkPolar}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryButtonText}>Link Polar Account</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={[styles.button, styles.secondaryButton]}
+              onPress={handleSkip}
+              disabled={loading}
+            >
+              <Text style={styles.secondaryButtonText}>Skip for Now</Text>
+            </Pressable>
           </View>
 
-          <View style={styles.benefit}>
-            <Text style={styles.benefitIcon}>📈</Text>
-            <View style={styles.benefitText}>
-              <Text style={styles.benefitTitle}>Workout History</Text>
-              <Text style={styles.benefitDescription}>
-                Access your complete workout history from Polar Flow
-              </Text>
-            </View>
+          {/* Info */}
+          <View style={styles.info}>
+            <Text style={styles.infoText}>
+              You'll be redirected to Polar Flow to authorize QuestFit.
+              Your credentials are secure and never stored by QuestFit.
+            </Text>
           </View>
-
-          <View style={styles.benefit}>
-            <Text style={styles.benefitIcon}>🐉</Text>
-            <View style={styles.benefitText}>
-              <Text style={styles.benefitTitle}>Unlock Creatures</Text>
-              <Text style={styles.benefitDescription}>
-                Capture more creatures with accurate heart rate data
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Action Buttons */}
-        <View style={styles.actions}>
-          <Pressable
-            style={[styles.button, styles.primaryButton, loading && styles.buttonDisabled]}
-            onPress={handleLinkPolar}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Link Polar Account</Text>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleSkip}
-            disabled={loading}
-          >
-            <Text style={styles.secondaryButtonText}>Skip for Now</Text>
-          </Pressable>
-        </View>
-
-        {/* Info */}
-        <View style={styles.info}>
-          <Text style={styles.infoText}>
-            You'll be redirected to Polar Flow to authorize QuestFit.
-            Your credentials are secure and never stored by QuestFit.
-          </Text>
         </View>
       </View>
-    </View>
+
+      {/* Consent Modal */}
+      <ConsentModal
+        visible={showConsentModal}
+        onConsent={handleConsentAccept}
+        onDecline={handleConsentDecline}
+        loading={consentLoading}
+      />
+    </>
   );
 };
 

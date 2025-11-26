@@ -11,6 +11,7 @@ import { Creature } from '@/src/types/polar';
 import creatureService from '@/src/services/creatureService';
 import { getXPToNextLevel, getXPForLevel } from '@/src/utils/levelSystem';
 import { polarOAuthService } from '@/src/services/polarOAuthService';
+import { ConsentModal } from '@/components/auth/ConsentModal';
 
 interface WorkoutHistoryItem {
   sessionId: string;
@@ -38,6 +39,8 @@ export default function XPManagementScreen() {
   const [xpAmount, setXpAmount] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
 
   useEffect(() => {
     if (user && !hasLoadedOnce) {
@@ -188,6 +191,39 @@ export default function XPManagementScreen() {
     updateXP(amount);
   };
 
+  const handleDisconnectPolar = async () => {
+    if (!user) return;
+    try {
+      await polarOAuthService.disconnectPolarAccount(user.uid);
+      setWeight(null);
+      setAge(null);
+      setGender(null);
+      console.log('✅ Polar account disconnected');
+    } catch (error) {
+      console.error('❌ Error disconnecting Polar:', error);
+      Alert.alert('Error', 'Failed to disconnect Polar account. Please try again.');
+    }
+  };
+
+  const handleConsentAccept = async () => {
+    if (!user) return;
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.setConsentGiven(user.uid);
+      setShowConsentModal(false);
+      Alert.alert('Success', 'Your consent has been recorded.');
+    } catch (error) {
+      console.error('Error recording consent:', error);
+      Alert.alert('Error', 'Failed to record consent. Please try again.');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  const handleConsentDecline = () => {
+    setShowConsentModal(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -198,243 +234,249 @@ export default function XPManagementScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Me</Text>
-        <Text style={styles.subtitle}>Manage your Profile</Text>
-      </View>
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Me</Text>
+          <Text style={styles.subtitle}>Manage your Profile</Text>
+        </View>
 
-      {/* Error Display */}
-      {error && (
-        <View style={styles.errorBox}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-          <Pressable onPress={loadUserXP} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+        {/* Error Display */}
+        {error && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Pressable onPress={loadUserXP} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Physical Attributes Display */}
+        {(weight !== null || age !== null || gender !== null) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Physical Attributes</Text>
+            <View style={styles.attributesContainer}>
+              {weight !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Weight</Text>
+                  <Text style={styles.attributeValue}>{weight} kg</Text>
+                </View>
+              )}
+              {age !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Age</Text>
+                  <Text style={styles.attributeValue}>{age} years</Text>
+                </View>
+              )}
+              {gender !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Gender</Text>
+                  <Text style={styles.attributeValue}>{gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : gender}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Current XP Display */}
+        <View style={styles.xpDisplaySection}>
+          <Text style={styles.xpLabel}>Level {currentLevel}</Text>
+          <View style={styles.xpDisplay}>
+            <Text style={styles.xpValue}>{currentXP}</Text>
+            <Text style={styles.xpUnit}>XP</Text>
+            <Text style={styles.xpIcon}>⭐</Text>
+          </View>
+          <View style={styles.progressInfo}>
+            <Text style={styles.progressText}>
+              Next level at {getXPForLevel(currentLevel + 1)} XP ({getXPToNextLevel(currentXP, currentLevel)} XP to go)
+            </Text>
+          </View>
+          <Pressable onPress={loadUserXP} style={styles.refreshButton}>
+            <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
           </Pressable>
         </View>
-      )}
 
-      {/* Physical Attributes Display */}
-      {(weight !== null || age !== null || gender !== null) && (
+        {/* Stats Display */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Physical Attributes</Text>
-          <View style={styles.attributesContainer}>
-            {weight !== null && (
-              <View style={styles.attributeBox}>
-                <Text style={styles.attributeLabel}>Weight</Text>
-                <Text style={styles.attributeValue}>{weight} kg</Text>
-              </View>
-            )}
-            {age !== null && (
-              <View style={styles.attributeBox}>
-                <Text style={styles.attributeLabel}>Age</Text>
-                <Text style={styles.attributeValue}>{age} years</Text>
-              </View>
-            )}
-            {gender !== null && (
-              <View style={styles.attributeBox}>
-                <Text style={styles.attributeLabel}>Gender</Text>
-                <Text style={styles.attributeValue}>{gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : gender}</Text>
-              </View>
-            )}
+          <Text style={styles.sectionTitle}>Workout Stats</Text>
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{totalWorkouts}</Text>
+              <Text style={styles.statLabel}>Workouts</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{totalCalories.toLocaleString()}</Text>
+              <Text style={styles.statLabel}>Calories</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{currentLevel}</Text>
+              <Text style={styles.statLabel}>Level</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{Math.round(totalDuration)}</Text>
+              <Text style={styles.statLabel}>Minutes</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{Math.round(totalAvgHeartRate)}</Text>
+              <Text style={styles.statLabel}>Avg HR</Text>
+            </View>
           </View>
         </View>
-      )}
 
-      {/* Current XP Display */}
-      <View style={styles.xpDisplaySection}>
-        <Text style={styles.xpLabel}>Level {currentLevel}</Text>
-        <View style={styles.xpDisplay}>
-          <Text style={styles.xpValue}>{currentXP}</Text>
-          <Text style={styles.xpUnit}>XP</Text>
-          <Text style={styles.xpIcon}>⭐</Text>
-        </View>
-        <View style={styles.progressInfo}>
-          <Text style={styles.progressText}>
-            Next level at {getXPForLevel(currentLevel + 1)} XP ({getXPToNextLevel(currentXP, currentLevel)} XP to go)
-          </Text>
-        </View>
-        <Pressable onPress={loadUserXP} style={styles.refreshButton}>
-          <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
-        </Pressable>
-      </View>
-
-      {/* Stats Display */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Workout Stats</Text>
-        <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{totalWorkouts}</Text>
-            <Text style={styles.statLabel}>Workouts</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{totalCalories.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>Calories</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{currentLevel}</Text>
-            <Text style={styles.statLabel}>Level</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{Math.round(totalDuration)}</Text>
-            <Text style={styles.statLabel}>Minutes</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{Math.round(totalAvgHeartRate)}</Text>
-            <Text style={styles.statLabel}>Avg HR</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Captured Creatures */}
-      {capturedCreatures.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Captured Creatures ({capturedCreatures.length})</Text>
-          <View style={styles.creaturesGrid}>
-            {capturedCreatures.map((creature, index) => (
-              <View 
-                key={`${creature.id}-${index}`} 
-                style={[
-                  styles.creatureCard,
-                  { borderLeftColor: getRarityColor(creature.type) }
-                ]}
-              >
-                <Text style={styles.creatureName}>{creature.name}</Text>
-                <Text style={[styles.creatureRarity, { color: getRarityColor(creature.type) }]}>
-                  {creature.type.toUpperCase()}
-                </Text>
-                <View style={styles.creatureStats}>
-                  <Text style={styles.creatureStat}>⚔️ {creature.stats.power}</Text>
-                  <Text style={styles.creatureStat}>⚡ {creature.stats.speed}</Text>
-                  <Text style={styles.creatureStat}>💪 {creature.stats.endurance}</Text>
+        {/* Captured Creatures */}
+        {capturedCreatures.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Captured Creatures ({capturedCreatures.length})</Text>
+            <View style={styles.creaturesGrid}>
+              {capturedCreatures.map((creature, index) => (
+                <View 
+                  key={`${creature.id}-${index}`} 
+                  style={[
+                    styles.creatureCard,
+                    { borderLeftColor: getRarityColor(creature.type) }
+                  ]}
+                >
+                  <Text style={styles.creatureName}>{creature.name}</Text>
+                  <Text style={[styles.creatureRarity, { color: getRarityColor(creature.type) }]}>
+                    {creature.type.toUpperCase()}
+                  </Text>
+                  <View style={styles.creatureStats}>
+                    <Text style={styles.creatureStat}>⚔️ {creature.stats.power}</Text>
+                    <Text style={styles.creatureStat}>⚡ {creature.stats.speed}</Text>
+                    <Text style={styles.creatureStat}>💪 {creature.stats.endurance}</Text>
+                  </View>
                 </View>
-              </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Workout History */}
+        {workoutHistory.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Workouts</Text>
+            {workoutHistory.map((item, index) => (
+              <View key={`${item.sessionId}-${index}`} style={styles.historyItem}>
+                <View style={styles.historyLeft}>
+                  <Text style={styles.historyDate}>
+                    {item.date.toLocaleDateString()} {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  <Text style={styles.historySport}>{item.sport}</Text>
+                </View>
+                <View style={styles.historyRight}>
+                  <Text style={styles.historyXP}>+{item.xpEarned} XP</Text>
+                </View>
+             </View>
             ))}
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Workout History */}
-      {workoutHistory.length > 0 && (
+        {/* Manual XP Input
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent Workouts</Text>
-          {workoutHistory.map((item, index) => (
-            <View key={`${item.sessionId}-${index}`} style={styles.historyItem}>
-              <View style={styles.historyLeft}>
-                <Text style={styles.historyDate}>
-                  {item.date.toLocaleDateString()} {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-                <Text style={styles.historySport}>{item.sport}</Text>
-              </View>
-              <View style={styles.historyRight}>
-                <Text style={styles.historyXP}>+{item.xpEarned} XP</Text>
-              </View>
-           </View>
-          ))}
-        </View>
-      )}
+          <Text style={styles.sectionTitle}>Add/Remove XP</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Enter XP amount"
+            placeholderTextColor="#9CA3AF"
+            keyboardType="numeric"
+            value={xpAmount}
+            onChangeText={setXpAmount}
+            editable={!updating}
+          />
 
-      {/* Manual XP Input
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add/Remove XP</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Enter XP amount"
-          placeholderTextColor="#9CA3AF"
-          keyboardType="numeric"
-          value={xpAmount}
-          onChangeText={setXpAmount}
-          editable={!updating}
-        />
-
-        <View style={styles.buttonRow}>
-          <Pressable
-            style={[styles.actionButton, styles.addButton, updating && styles.buttonDisabled]}
-            onPress={handleAddXP}
-            disabled={updating}
-          >
-            {updating ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.actionButtonText}>➕ Add XP</Text>
-            )}
-          </Pressable>
-
-          <Pressable
-            style={[styles.actionButton, styles.removeButton, updating && styles.buttonDisabled]}
-            onPress={handleRemoveXP}
-            disabled={updating}
-          >
-            {updating ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.actionButtonText}>➖ Remove XP</Text>
-            )}
-          </Pressable>
-        </View>
-      </View> */}
-
-      {/* Quick Add Buttons */}
-      {/* <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Quick Add</Text>
-        <View style={styles.quickAddGrid}>
-          {[10, 25, 50, 100, 250, 500].map((amount) => (
+          <View style={styles.buttonRow}>
             <Pressable
-              key={amount}
-              style={[styles.quickAddButton, updating && styles.buttonDisabled]}
-              onPress={() => handleQuickAdd(amount)}
+              style={[styles.actionButton, styles.addButton, updating && styles.buttonDisabled]}
+              onPress={handleAddXP}
               disabled={updating}
             >
-              <Text style={styles.quickAddButtonText}>+{amount}</Text>
+              {updating ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.actionButtonText}>➕ Add XP</Text>
+              )}
             </Pressable>
-          ))}
-        </View>
-      </View> */}
 
-      {/* XP Guide */}
-      <View style={styles.section}>
-        <Text style={styles.guideTitle}>💡 XP Guide</Text>
-        <Text style={styles.guideText}>• Complete workouts to earn XP</Text>
-        <Text style={styles.guideText}>• Use XP to level up your creatures</Text>
-        <Text style={styles.guideText}>• Higher intensity = more XP earned</Text>
-        <Text style={styles.guideText}>• Track your progress over time</Text>
-      </View>
+            <Pressable
+              style={[styles.actionButton, styles.removeButton, updating && styles.buttonDisabled]}
+              onPress={handleRemoveXP}
+              disabled={updating}
+            >
+              {updating ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.actionButtonText}>➖ Remove XP</Text>
+              )}
+            </Pressable>
+          </View>
+        </View> */}
 
-      {/* User Info */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Info</Text>
-        <Text style={styles.infoText}>User ID: {user?.uid.slice(0, 20)}...</Text>
-        <Text style={styles.infoText}>
-          Status: {user ? '✅ Logged In' : '❌ Not Logged In'}
-        </Text>
-        <Text style={styles.infoText}>
-          Username: {user?.displayName || 'N/A'}
-        </Text>
-      </View>
+        {/* Quick Add Buttons */}
+        {/* <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Quick Add</Text>
+          <View style={styles.quickAddGrid}>
+            {[10, 25, 50, 100, 250, 500].map((amount) => (
+              <Pressable
+                key={amount}
+                style={[styles.quickAddButton, updating && styles.buttonDisabled]}
+                onPress={() => handleQuickAdd(amount)}
+                disabled={updating}
+              >
+                <Text style={styles.quickAddButtonText}>+{amount}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View> */}
 
-      {/* Polar Disconnect Button */}
-      {(weight !== null || age !== null || gender !== null) && (
+        {/* XP Guide */}
         <View style={styles.section}>
-          <Pressable
-            style={styles.disconnectPolarButton}
-            onPress={async () => {
-              if (!user) return;
-              try {
-                await polarOAuthService.disconnectPolarAccount(user.uid);
-                setWeight(null);
-                setAge(null);
-                setGender(null);
-                console.log('✅ Polar account disconnected');
-              } catch (error) {
-                console.error('❌ Error disconnecting Polar:', error);
-              }
-            }}
-          >
-            <Text style={styles.disconnectPolarButtonText}>🔌 Disconnect Polar</Text>
-          </Pressable>
+          <Text style={styles.guideTitle}>💡 XP Guide</Text>
+          <Text style={styles.guideText}>• Complete workouts to earn XP</Text>
+          <Text style={styles.guideText}>• Use XP to level up your creatures</Text>
+          <Text style={styles.guideText}>• Higher intensity = more XP earned</Text>
+          <Text style={styles.guideText}>• Track your progress over time</Text>
         </View>
-      )}
-    </ScrollView>
+
+        {/* User Info */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account Info</Text>
+          <Text style={styles.infoText}>User ID: {user?.uid.slice(0, 20)}...</Text>
+          <Text style={styles.infoText}>
+            Status: {user ? '✅ Logged In' : '❌ Not Logged In'}
+          </Text>
+          <Text style={styles.infoText}>
+            Username: {user?.displayName || 'N/A'}
+          </Text>
+        </View>
+
+        {/* Polar Disconnect Button and Show Consent Button */}
+        {(weight !== null || age !== null || gender !== null) && (
+          <View style={styles.section}>
+            <Pressable
+              style={styles.showConsentButton}
+              onPress={() => setShowConsentModal(true)}
+            >
+              <Text style={styles.showConsentButtonText}>📋 Show Consent</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.disconnectPolarButton}
+              onPress={handleDisconnectPolar}
+            >
+              <Text style={styles.disconnectPolarButtonText}>🔌 Disconnect Polar</Text>
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Consent Modal */}
+      <ConsentModal
+        visible={showConsentModal}
+        onConsent={handleConsentAccept}
+        onDecline={handleConsentDecline}
+        loading={consentLoading}
+      />
+    </>
   );
 }

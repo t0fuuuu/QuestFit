@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Tabs } from 'expo-router';
-import { Pressable, StyleSheet, Image, View, Modal } from 'react-native';
+import { Pressable, StyleSheet, Image, View, Modal, Alert, ActivityIndicator } from 'react-native';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -10,6 +10,7 @@ import { useClientOnlyValue } from '@/components/useClientOnlyValue';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useInstructor } from '@/src/hooks/useInstructor';
 import { PolarLinkScreen } from '@/components/auth/PolarLinkScreen';
+import { ConsentModal } from '@/components/auth/ConsentModal';
 import { polarOAuthService } from '@/src/services/polarOAuthService';
 
 
@@ -36,6 +37,8 @@ export default function TabLayout() {
   const { isInstructor } = useInstructor(user?.uid);
   const [showPolarModal, setShowPolarModal] = useState(false);
   const [hasPolarToken, setHasPolarToken] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentLoading, setConsentLoading] = useState(false);
 
   useEffect(() => {
     checkPolarToken();
@@ -66,14 +69,45 @@ export default function TabLayout() {
       if (result) {
         console.log('✅ Polar account linked successfully!');
         setHasPolarToken(true);
-        
-        // Show success message for 5 seconds
-        alert('Polar connected!');
+        // Show consent modal instead of just an alert
+        setShowConsentModal(true);
       } else {
         console.log('❌ Polar linking failed or was cancelled');
       }
     } catch (error) {
       console.error('Error linking Polar account:', error);
+      Alert.alert('Error', 'Failed to link Polar account. Please try again.');
+    }
+  };
+
+  const handleConsentAccept = async () => {
+    if (!user) return;
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.setConsentGiven(user.uid);
+      setShowConsentModal(false);
+      Alert.alert('Success', 'Your consent has been recorded and Polar account is linked!');
+    } catch (error) {
+      console.error('Error recording consent:', error);
+      Alert.alert('Error', 'Failed to record consent. Please try again.');
+    } finally {
+      setConsentLoading(false);
+    }
+  };
+
+  const handleConsentDecline = async () => {
+    if (!user) return;
+    try {
+      setConsentLoading(true);
+      await polarOAuthService.disconnectPolarAccount(user.uid);
+      setHasPolarToken(false);
+      setShowConsentModal(false);
+      Alert.alert('Declined', 'Your Polar account has been disconnected. You can link it again anytime.');
+    } catch (error) {
+      console.error('Error declining consent:', error);
+      Alert.alert('Error', 'Failed to process your request. Please try again.');
+    } finally {
+      setConsentLoading(false);
     }
   };
 
@@ -213,6 +247,14 @@ export default function TabLayout() {
         />
       )}
     </Modal>
+
+    {/* Consent Modal */}
+    <ConsentModal
+      visible={showConsentModal}
+      onConsent={handleConsentAccept}
+      onDecline={handleConsentDecline}
+      loading={consentLoading}
+    />
   </>
   );
 }

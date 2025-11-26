@@ -769,6 +769,19 @@ export const xpStyles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
+  showConsentButton: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  showConsentButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   disconnectPolarButton: {
     backgroundColor: '#EF4444',
     paddingVertical: 14,
