@@ -1,11 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
+import axios from 'axios';
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin
+if (admin.apps.length === 0) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+
+const db = admin.firestore();
 
 // Signature secret from Polar webhook creation
 const SIGNATURE_SECRET = 'b9ea4ffb-963e-4c44-b607-cc0617124ebc';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log('Webhook received:', req.method, req.body);
+  console.log('Webhook received:', req.method);
+
+  // Handle GET requests (Health check)
+  if (req.method === 'GET') {
+    return res.status(200).json({ 
+      status: 'active',
+      message: 'Polar Webhook Endpoint is running' 
+    });
+  }
 
   // Handle ping from Polar during webhook creation
   if (req.method === 'POST' && req.body?.ping) {
@@ -30,27 +53,112 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(401).json({ error: 'Invalid signature' });
       }
       
-      console.log('✅ Signature verified');
+      console.log('Signature verified');
     }
 
-    console.log('🔔 Webhook event received:', JSON.stringify(req.body, null, 2));
+    console.log('Webhook event received:', JSON.stringify(req.body, null, 2));
     
-    // Process the webhook event here
-    // Event types: EXERCISE, SLEEP, ACTIVITY_SUMMARY
-    const event = req.body;
-    
-    if (event.event === 'EXERCISE') {
-      console.log('💪 New exercise data available for user:', event.user_id);
-      // TODO: Fetch and process exercise data
-    } else if (event.event === 'SLEEP') {
-      console.log('😴 New sleep data available for user:', event.user_id);
-      // TODO: Fetch and process sleep data
-    } else if (event.event === 'ACTIVITY_SUMMARY') {
-      console.log('📊 New activity summary available for user:', event.user_id);
-      // TODO: Fetch and process activity summary
+    const { event, url, user_id: polarUserId } = req.body;
+
+    if (!url || !polarUserId) {
+        console.log('Missing url or user_id in webhook payload');
+        return res.status(200).json({ message: 'Missing data, ignoring' });
     }
+
+    try {
+        // 1. Find the user
+        // The document ID is the Polar User ID
+        const userDoc = await db.collection('users').doc(String(polarUserId)).get();
     
-    return res.status(200).json({ received: true });
+        if (!userDoc.exists) {
+          console.log(`User not found for Polar ID: ${polarUserId}`);
+          return res.status(200).json({ message: 'User not found, ignoring' });
+        }
+    
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+        const accessToken = userData.polarAccessToken;
+    
+        if (!accessToken) {
+           console.log(`No access token for user ${userId}`);
+           return res.status(200).json({ message: 'No access token, ignoring' });
+        }
+
+        // 2. Fetch the data
+        console.log(`Fetching data from ${url}`);
+        const response = await axios.get(url, {
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json',
+            }
+        });
+        const data = response.data;
+        
+        // 3. Process based on event type
+        const syncedAt = new Date().toISOString();
+        const userPolarRef = db.collection('users').doc(userId).collection('polarData');
+
+        if (event === 'EXERCISE') {
+             const startTime = data.start_time; 
+             if (startTime) {
+                 const date = startTime.split('T')[0];
+                 console.log(`Processing EXERCISE for date: ${date}`);
+                 
+                 const ref = userPolarRef.doc('exercises').collection('all').doc(date);
+                 
+                 await db.runTransaction(async (t: any) => {
+                     const doc = await t.get(ref);
+                     let exercises = [];
+                     if (doc.exists) {
+                         exercises = doc.data().exercises || [];
+                     }
+                     
+                     // Remove existing if updating (by id)
+                     const existingIndex = exercises.findIndex((e: any) => e.id === data.id);
+                     if (existingIndex > -1) {
+                         exercises[existingIndex] = { ...data, syncedAt };
+                     } else {
+                         exercises.push({ ...data, syncedAt });
+                     }
+                     
+                     t.set(ref, {
+                         date,
+                         exercises,
+                         count: exercises.length,
+                         syncedAt
+                     }, { merge: true });
+                 });
+             }
+        } else if (event === 'SLEEP') {
+             const date = data.date;
+             if (date) {
+                 console.log(`Processing SLEEP for date: ${date}`);
+                 const ref = userPolarRef.doc('sleep').collection('all').doc(date);
+                 await ref.set({ ...data, syncedAt });
+             }
+        } else if (event === 'ACTIVITY_SUMMARY') {
+             const date = data.date;
+             if (date) {
+                 console.log(`Processing ACTIVITY_SUMMARY for date: ${date}`);
+                 const ref = userPolarRef.doc('activities').collection('all').doc(date);
+                 await ref.set({ ...data, syncedAt });
+             }
+        } else if (event === 'CONTINUOUS_HEART_RATE') {
+             const date = data.date;
+             if (date) {
+                 console.log(`Processing CONTINUOUS_HEART_RATE for date: ${date}`);
+                 const ref = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
+                 await ref.set({ ...data, syncedAt });
+             }
+        }
+        
+        console.log(`Successfully processed ${event} for user ${userId}`);
+        return res.status(200).json({ success: true });
+
+    } catch (error: any) {
+        console.error('Error processing webhook:', error.message);
+        return res.status(200).json({ error: error.message });
+    }
   }
 
   return res.status(405).json({ error: 'Method not allowed' });
