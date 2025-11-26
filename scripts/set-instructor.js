@@ -1,5 +1,5 @@
 /**
- * Script to set a user as an instructor in Firebase
+ * set a user as an instructor in Firebase
  * 
  * Usage: node scripts/set-instructor.js <userId>
  * Example: node scripts/set-instructor.js admin_user

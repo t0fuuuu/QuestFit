@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, Pressable, ActivityIndicator, Modal, Alert, ScrollView } from 'react-native';
 import { Text } from '@/components/Themed';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as WebBrowser from 'expo-web-browser';
 import { notifyAuthChange } from '@/src/hooks/useAuth';
 import { polarOAuthService, PolarUserTokens } from '@/src/services/polarOAuthService';
 import { ConsentModal } from './ConsentModal';
@@ -19,6 +20,14 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignInSuccess }) =
   const [consentLoading, setConsentLoading] = useState(false);
   const [pendingUser, setPendingUser] = useState<{ uid: string; displayName: string } | null>(null);
   const [pendingTokens, setPendingTokens] = useState<PolarUserTokens | null>(null);
+
+  useEffect(() => {
+    // Warm up the browser to make the login popup appear faster
+    WebBrowser.warmUpAsync();
+    return () => {
+      WebBrowser.coolDownAsync();
+    };
+  }, []);
 
   const handlePolarLogin = async () => {
     try {
