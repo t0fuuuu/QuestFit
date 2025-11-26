@@ -1,4 +1,4 @@
-id,name,type,description,image,animation,power,speed,endurance,minCalories,minDuration,sport,unlockDescription,experienceReward,lore
+id,name,rarity,description,image,animation,power,speed,endurance,minCalories,minDuration,sport,unlockDescription,experienceReward,lore
 001,Thunder Wolf,rare,A swift predator that runs with lightning speed through mountain trails.,,,85,92,78,400,30,RUNNING,Complete a 30+ minute run burning 400+ calories,150,Thunder Wolves are known to inhabit high-altitude regions where storms are frequent.
 002,Flame Phoenix,epic,A majestic bird of fire that rises from intense training sessions.,,,120,88,95,600,60,,Train for 60+ minutes burning 600+ calories,250,Only the most dedicated athletes can summon this legendary creature.
 003,Aqua Serpent,common,A graceful water creature that emerges during swimming sessions.,,,45,65,70,200,,SWIMMING,Complete a swimming workout burning 200+ calories,75,Found in all major bodies of water, this creature loves to accompany swimmers.

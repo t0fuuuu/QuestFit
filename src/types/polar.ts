@@ -66,7 +66,9 @@ export interface HeartRateData {
 export interface Creature {
   id: string;
   name: string;
-  type: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  sport: 'NEUTRAL' | 'RUNNING' | 'SWIMMING' | 'HIKING' | 'FITNESS' | 'CYCLING' | 'CIRCUIT'
+  description: string;
   image: string;
   animation?: string;
   stats: {
@@ -74,13 +76,15 @@ export interface Creature {
     speed: number;
     endurance: number;
   };
-  requiredWorkout: {
+  unlockRequirements: {
     minCalories?: number;
-    minDuration?: number; // in minutes
-    minDistance?: number; // in meters
+    minDuration?: number;
+    minDistance?: number;
     minHeartRate?: number;
-    sport?: string;
+    description: string;
   };
+  xPReward: number;
+  lore: string;
 }
 
 export interface UserGameProfile {
