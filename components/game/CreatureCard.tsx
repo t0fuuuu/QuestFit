@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
+import { View, Text, Pressable, Dimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { Creature } from '../../src/types/polar';
 import { creatureCardStyles as styles, getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 
@@ -112,7 +113,7 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
         >
         <View style={styles.header}>
           <Text style={styles.name}>{card.creature.name}</Text>
-          <View style={[styles.header, {marginBottom: 0}]}>
+          <View style={styles.header}>
           <Text style={[
             styles.rarity,
             { color: getRarityColor(card.creature.rarity) }
@@ -130,6 +131,12 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
               {card.creature.sport}
             </Text>
           </View>
+        </View>
+        <View>
+          <Image 
+            source={require('../../assets/images/creatures/placeholder.png')} 
+            style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated' } as any} 
+          />
         </View>
         <View style={styles.stats}>
           <View style={styles.stat}>
