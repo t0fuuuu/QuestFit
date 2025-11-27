@@ -93,10 +93,16 @@ export const creatureCardStyles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  requirements: {
+  border: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
+  },
+  desc: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
   requirementsTitle: {
     fontSize: 14,
@@ -113,8 +119,10 @@ export const creatureCardStyles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "flex-start",
+    alignItems: "stretch",
   },
   card: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 8,

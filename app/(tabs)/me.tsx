@@ -381,7 +381,7 @@ export default function XPManagementScreen() {
                   <View style={styles.creatureStats}>
                     <Text style={styles.creatureStat}>⚔️ {creature.stats.power}</Text>
                     <Text style={styles.creatureStat}>⚡ {creature.stats.speed}</Text>
-                    <Text style={styles.creatureStat}>💪 {creature.stats.endurance}</Text>
+                    <Text style={styles.creatureStat}>🛡️ {creature.stats.endurance}</Text>
                   </View>
                 </View>
               ))}

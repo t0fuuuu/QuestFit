@@ -52,7 +52,7 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
       )}
 
       {!captured && (
-        <View style={styles.requirements}>
+        <View style={styles.border}>
           <Text style={styles.requirementsTitle}>Requirements:</Text>
           {creature.unlockRequirements.minCalories && (
             <Text style={styles.requirement}>• {creature.unlockRequirements.minCalories} calories</Text>
@@ -75,31 +75,23 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
 interface CardGridProps {
   cards: CreatureCardProps[];
   onPress?: (id: number) => void;
-  maxColumns?: number;
   area?: number;
   minCardWidth?: number;
-  minCardHeight?: number;
 }
 
 export const CreatureCardGrid: React.FC<CardGridProps> = ({
   cards,
   minCardWidth = 325, // minimum size a card can shrink to
-  minCardHeight = 100,
-  area = minCardWidth*minCardHeight*1.15, // default area of a card
-  maxColumns = 999,
   onPress
 }: CardGridProps) => {
   const [cardWidth, setCardWidth] = useState(2);
-  const [cardHeight, setCardHeight] = useState(2);
 
   useEffect(() => {
     const calculateCardDims = () => {
       const screenWidth = Dimensions.get("window").width;
-      const columns = Math.max(Math.min(Math.floor(screenWidth/minCardWidth), maxColumns), 1); // at least 1 column
-      const width = Dimensions.get("window").width/columns; // spacing-friendly width
-      console.log(width, "width", area/width, "height for", columns, "columns");
+      const columns = Math.max(Math.floor(screenWidth/minCardWidth), 1); // at least 1 column
+      const width = Dimensions.get("window").width/columns;
       setCardWidth(width);
-      setCardHeight(area/width);
     };
 
     calculateCardDims();
@@ -114,9 +106,7 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
         <View style={{ width: cardWidth, minWidth: minCardWidth }} key={card.creature.id}>
         <Pressable 
         style={[styles.card, { 
-          borderColor: getRarityColor(card.creature.rarity),
-          height: cardHeight,
-          minHeight: minCardHeight
+          borderColor: getRarityColor(card.creature.rarity)
         }]}
         onPress={() => onPress?.(parseInt(card.creature.id))}
         >
@@ -143,17 +133,20 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
         </View>
         <View style={styles.stats}>
           <View style={styles.stat}>
-            <Text style={styles.statLabel}>Power</Text>
+            <Text style={styles.statLabel}>⚔️ Power</Text>
             <Text style={styles.statValue}>{card.creature.stats.power}</Text>
             </View>
             <View style={styles.stat}>
-              <Text style={styles.statLabel}>Speed</Text>
+              <Text style={styles.statLabel}>⚡ Speed</Text>
               <Text style={styles.statValue}>{card.creature.stats.speed}</Text>
               </View>
               <View style={styles.stat}>
-                <Text style={styles.statLabel}>Endurance</Text>
+                <Text style={styles.statLabel}>🛡️ Endurance</Text>
                 <Text style={styles.statValue}>{card.creature.stats.endurance}</Text>
               </View>
+            </View>
+            <View style={styles.border}>
+              <Text style={styles.desc}>{card.creature.description}</Text>
             </View>
       </Pressable>
       </View>
