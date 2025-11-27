@@ -60,7 +60,12 @@ export const creatureUnlockModalStyles = StyleSheet.create({
     color: '#1F2937',
     flex: 1,
   },
-  rarityBadge: {
+  rarity: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sportBadge: {
+    fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,

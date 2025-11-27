@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureUnlockModalStyles as styles } from '@/src/styles/components/creatureUnlockModalStyles';
+import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 
 interface CreatureUnlockModalProps {
   visible: boolean;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, FlatList, Platform } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { getRarityColor, getSportColor } from '@/constants/Colors';
+import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import { db } from '@/src/services/firebase';
