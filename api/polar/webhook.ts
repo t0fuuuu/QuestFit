@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('Webhook event received:', JSON.stringify(req.body, null, 2));
     
-    const { event, url, user_id: polarUserId } = req.body;
+    const { event, url, user_id: polarUserId, date: webhookDate } = req.body;
 
     if (!url || !polarUserId) {
         console.log('Missing url or user_id in webhook payload');
@@ -68,6 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     try {
         // 1. Find the user
         // The document ID is the Polar User ID
+        console.log(`Looking up user for Polar ID: ${polarUserId}`);
         const userDoc = await db.collection('users').doc(String(polarUserId)).get();
     
         if (!userDoc.exists) {
@@ -76,6 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
     
         const userId = userDoc.id;
+        console.log(`Found Firebase User ID: ${userId}`);
+
         const userData = userDoc.data();
         const accessToken = userData.polarAccessToken;
     
@@ -93,10 +96,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         });
         const data = response.data;
+        console.log('Fetched data:', JSON.stringify(data, null, 2));
         
+        if (!data) {
+            console.log('No data received from Polar API');
+            return res.status(200).json({ message: 'No data received' });
+        }
+
         // 3. Process based on event type
         const syncedAt = new Date().toISOString();
         const userPolarRef = db.collection('users').doc(userId).collection('polarData');
+        
+        // Update the user's global lastSync timestamp
+        await db.collection('users').doc(userId).update({ lastSync: syncedAt });
+        
+        console.log(`Writing to Firestore path: users/${userId}/polarData/...`);
 
         if (event === 'EXERCISE') {
              const startTime = data.start_time; 
@@ -105,6 +119,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  console.log(`Processing EXERCISE for date: ${date}`);
                  
                  const ref = userPolarRef.doc('exercises').collection('all').doc(date);
+                 console.log(`Target Document: ${ref.path}`);
                  
                  await db.runTransaction(async (t: any) => {
                      const doc = await t.get(ref);
@@ -128,27 +143,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          syncedAt
                      }, { merge: true });
                  });
+
+                 // Update sync summary
+                 const summaryRef = userPolarRef.doc('syncSummary').collection('all').doc(date);
+                 console.log(`Updating Sync Summary at: ${summaryRef.path}`);
+                 await summaryRef.set({ syncedAt, date }, { merge: true });
+
+             } else {
+                 console.error('Missing start_time in EXERCISE data');
+                 return res.status(400).json({ error: 'Missing start_time in EXERCISE data' });
              }
         } else if (event === 'SLEEP') {
-             const date = data.date;
+             const date = data.date || webhookDate;
              if (date) {
                  console.log(`Processing SLEEP for date: ${date}`);
                  const ref = userPolarRef.doc('sleep').collection('all').doc(date);
-                 await ref.set({ ...data, syncedAt });
+                 console.log(`Target Document: ${ref.path}`);
+                 await ref.set({ ...data, date, syncedAt });
+
+                 // Update sync summary
+                 const summaryRef = userPolarRef.doc('syncSummary').collection('all').doc(date);
+                 console.log(`Updating Sync Summary at: ${summaryRef.path}`);
+                 await summaryRef.set({ syncedAt, date }, { merge: true });
+             } else {
+                 console.error('Missing date in SLEEP data');
+                 return res.status(400).json({ error: 'Missing date in SLEEP data' });
              }
         } else if (event === 'ACTIVITY_SUMMARY') {
-             const date = data.date;
+             const date = data.date || webhookDate;
              if (date) {
                  console.log(`Processing ACTIVITY_SUMMARY for date: ${date}`);
                  const ref = userPolarRef.doc('activities').collection('all').doc(date);
-                 await ref.set({ ...data, syncedAt });
+                 console.log(`Target Document: ${ref.path}`);
+                 await ref.set({ ...data, date, syncedAt });
+
+                 // Update sync summary
+                 const summaryRef = userPolarRef.doc('syncSummary').collection('all').doc(date);
+                 console.log(`Updating Sync Summary at: ${summaryRef.path}`);
+                 await summaryRef.set({ syncedAt, date }, { merge: true });
+             } else {
+                 console.error('Missing date in ACTIVITY_SUMMARY data');
+                 return res.status(400).json({ error: 'Missing date in ACTIVITY_SUMMARY data' });
              }
         } else if (event === 'CONTINUOUS_HEART_RATE') {
-             const date = data.date;
+             const date = data.date || webhookDate;
              if (date) {
                  console.log(`Processing CONTINUOUS_HEART_RATE for date: ${date}`);
                  const ref = userPolarRef.doc('continuousHeartRate').collection('all').doc(date);
-                 await ref.set({ ...data, syncedAt });
+                 console.log(`Target Document: ${ref.path}`);
+                 await ref.set({ ...data, date, syncedAt });
+
+                 // Update sync summary
+                 const summaryRef = userPolarRef.doc('syncSummary').collection('all').doc(date);
+                 console.log(`Updating Sync Summary at: ${summaryRef.path}`);
+                 await summaryRef.set({ syncedAt, date }, { merge: true });
+             } else {
+                 console.error('Missing date in CONTINUOUS_HEART_RATE data');
+                 return res.status(400).json({ error: 'Missing date in CONTINUOUS_HEART_RATE data' });
              }
         }
         

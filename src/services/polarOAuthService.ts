@@ -165,10 +165,13 @@ class PolarOAuthService {
             lastLogin: new Date(),
           });
 
+          // Fetch and update user physical data
+          const updatedName = await this.getUserPhysicalData(mockTokens.accessToken, polarUserId, polarUserId);
+
           return {
             user: {
               uid: polarUserId,
-              displayName: userData.displayName || 'Dev Polar Athlete',
+              displayName: updatedName || userData.displayName || 'Dev Polar Athlete',
             },
             isNewUser: false
           };
@@ -238,15 +241,20 @@ class PolarOAuthService {
                 polarUserId: polarUserId,
                 lastLogin: new Date(),
               });
+
+              // Fetch and update user physical data
+              const updatedName = await this.getUserPhysicalData(tokens.accessToken, polarUserId, polarUserId);
+
+              return {
+                user: {
+                  uid: polarUserId,
+                  displayName: updatedName || userDoc.data().displayName || 'Polar Athlete',
+                },
+                isNewUser
+              };
             }
 
-            return {
-              user: {
-                uid: polarUserId,
-                displayName: userDoc.exists() ? userDoc.data().displayName : 'Polar Athlete',
-              },
-              isNewUser
-            };
+            return null;
           }
         }
       }
