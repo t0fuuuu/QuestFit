@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Creature } from '../../src/types/polar';
+import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
 
 interface CreatureCardProps {
   creature: Creature;
@@ -9,15 +10,6 @@ interface CreatureCardProps {
 }
 
 export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, captured = false }) => {
-  const getRarityColor = (type: Creature['rarity']) => {
-    switch (type) {
-      case 'common': return '#9CA3AF';
-      case 'rare': return '#3B82F6';
-      case 'epic': return '#8B5CF6';
-      case 'legendary': return '#F59E0B';
-      default: return '#9CA3AF';
-    }
-  };
 
   return (
     <Pressable 
@@ -26,9 +18,16 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
     >
       <View style={styles.header}>
         <Text style={styles.name}>{creature.name}</Text>
-        <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
-          {creature.rarity.toUpperCase()}
-        </Text>
+        <View style={styles.header}>
+          <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
+            {creature.rarity.toUpperCase()}
+          </Text>
+          <Text style={[styles.sportBadge, { 
+            backgroundColor: getSportColor(creature.sport)[0], 
+            color: getSportColor(creature.sport)[1] }]}>
+            {creature.sport}
+          </Text>
+        </View>
       </View>
       
       <View style={styles.stats}>
@@ -73,12 +72,12 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 12,
     padding: 16,
     margin: 8,
     borderWidth: 2,
-    shadowColor: '#000',
+    shadowColor: black,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -96,11 +95,18 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
   },
   rarity: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  sportBadge: {
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   stats: {
     flexDirection: 'row',
@@ -118,7 +124,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: black,
   },
   capturedBadge: {
     position: 'absolute',
@@ -142,7 +148,7 @@ const styles = StyleSheet.create({
   requirementsTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: black,
     marginBottom: 8,
   },
   requirement: {

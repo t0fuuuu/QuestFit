@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, FlatList, Platform } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
+import { getRarityColor, getSportColor } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import { db } from '@/src/services/firebase';
@@ -125,16 +126,6 @@ export default function XPManagementScreen() {
       setError(err instanceof Error ? err.message : 'Failed to load XP');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getRarityColor = (rarity: Creature['rarity']) => {
-    switch (rarity) {
-      case 'common': return '#9CA3AF';
-      case 'rare': return '#3B82F6';
-      case 'epic': return '#8B5CF6';
-      case 'legendary': return '#F59E0B';
-      default: return '#9CA3AF';
     }
   };
 
@@ -373,9 +364,16 @@ export default function XPManagementScreen() {
                   ]}
                 >
                   <Text style={styles.creatureName}>{creature.name}</Text>
+                  <View style={styles.header}>
                   <Text style={[styles.creatureRarity, { color: getRarityColor(creature.rarity) }]}>
                     {creature.rarity.toUpperCase()}
                   </Text>
+                  <Text style={[styles.creatureSportBadge, { 
+                    backgroundColor: getSportColor(creature.sport)[0],
+                    color: getSportColor(creature.sport)[1] }]}>
+                    {creature.sport}
+                  </Text>
+                  </View>
                   <View style={styles.creatureStats}>
                     <Text style={styles.creatureStat}>⚔️ {creature.stats.power}</Text>
                     <Text style={styles.creatureStat}>⚡ {creature.stats.speed}</Text>

@@ -1,10 +1,11 @@
 import { StyleSheet } from 'react-native';
+import { white, black } from '@/constants/Colors';
 
 // Home/Index Tab Styles
 export const indexStyles = StyleSheet.create({
   scrollView: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: white,
   },
   container: {
     flexGrow: 1,
@@ -12,18 +13,18 @@ export const indexStyles = StyleSheet.create({
   },
   headerContainer: {
     marginBottom: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: white,
   },
   headerContent: {
     marginBottom: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: white,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'left',
     marginBottom: 8,
-    color: '#1F2937',
+    color: black,
   },
   subtitle: {
     fontSize: 16,
@@ -39,7 +40,7 @@ export const indexStyles = StyleSheet.create({
     marginTop: 12,
   },
   signOutText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 12,
     fontWeight: '600',
   },
@@ -51,7 +52,7 @@ export const indexStyles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 16,
     marginLeft: 16,
-    color: '#1F2937',
+    color: black,
   },
 });
 
@@ -63,7 +64,7 @@ export const twoStyles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -71,7 +72,7 @@ export const twoStyles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
-    color: '#1F2937',
+    color: black,
     marginBottom: 8,
   },
   subtitle: {
@@ -109,14 +110,14 @@ export const liveStyles = StyleSheet.create({
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1F2937',
+    color: black,
   },
   subtitle: {
     fontSize: 16,
     color: '#6B7280',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -130,7 +131,7 @@ export const liveStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#1F2937',
+    color: black,
   },
   errorBox: {
     backgroundColor: '#FEE2E2',
@@ -169,7 +170,7 @@ export const liveStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#1F2937',
+    color: black,
   },
   devicesFoundText: {
     fontSize: 14,
@@ -194,7 +195,7 @@ export const liveStyles = StyleSheet.create({
   deviceName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: black,
     marginBottom: 4,
   },
   deviceId: {
@@ -230,12 +231,12 @@ export const liveStyles = StyleSheet.create({
     borderRadius: 6,
   },
   disconnectButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 12,
     fontWeight: '600',
   },
   heartRateSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 16,
     padding: 24,
     marginBottom: 16,
@@ -277,7 +278,7 @@ export const liveStyles = StyleSheet.create({
     borderRadius: 20,
   },
   zoneText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -293,7 +294,7 @@ export const liveStyles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
   workoutButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 18,
     fontWeight: '600',
   },
@@ -314,7 +315,7 @@ export const liveStyles = StyleSheet.create({
   metricValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
     marginBottom: 4,
   },
   metricLabel: {
@@ -330,13 +331,13 @@ export const liveStyles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    color: '#1F2937',
+    color: black,
     marginBottom: 8,
   },
   instructionsTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: black,
     marginBottom: 12,
   },
   instructionText: {
@@ -381,7 +382,7 @@ export const liveStyles = StyleSheet.create({
     zIndex: 1000,
   },
   countdownBox: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 20,
     padding: 40,
     alignItems: 'center',
@@ -463,22 +464,26 @@ export const xpStyles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
+
   header: {
-    marginBottom: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: 'transparent',
+    marginBottom: 12,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#1F2937',
+    color: black,
   },
   subtitle: {
     fontSize: 16,
     color: '#6B7280',
   },
   section: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -492,7 +497,7 @@ export const xpStyles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    color: '#1F2937',
+    color: black,
   },
   errorBox: {
     backgroundColor: '#FEE2E2',
@@ -517,12 +522,12 @@ export const xpStyles = StyleSheet.create({
     borderRadius: 6,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 12,
     fontWeight: '600',
   },
   xpDisplaySection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 16,
     padding: 24,
     marginBottom: 16,
@@ -565,7 +570,7 @@ export const xpStyles = StyleSheet.create({
     borderRadius: 8,
   },
   refreshButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 14,
     fontWeight: '600',
   },
@@ -574,7 +579,7 @@ export const xpStyles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    color: '#1F2937',
+    color: black,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     marginBottom: 12,
@@ -599,7 +604,7 @@ export const xpStyles = StyleSheet.create({
     opacity: 0.6,
   },
   actionButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -616,14 +621,14 @@ export const xpStyles = StyleSheet.create({
     alignItems: 'center',
   },
   quickAddButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 18,
     fontWeight: '600',
   },
   guideTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: black,
     marginBottom: 12,
   },
   guideText: {
@@ -691,7 +696,7 @@ export const xpStyles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
     marginBottom: 4,
   },
   statLabel: {
@@ -716,7 +721,7 @@ export const xpStyles = StyleSheet.create({
   },
   historyDate: {
     fontSize: 14,
-    color: '#1F2937',
+    color: black,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -750,7 +755,7 @@ export const xpStyles = StyleSheet.create({
   creatureName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
     marginBottom: 4,
   },
   creatureRarity: {
@@ -758,6 +763,13 @@ export const xpStyles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     textTransform: 'uppercase',
+  },
+  creatureSportBadge: {
+    fontSize: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   creatureStats: {
     flexDirection: 'row',
@@ -778,7 +790,7 @@ export const xpStyles = StyleSheet.create({
     marginBottom: 8,
   },
   showConsentButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -791,7 +803,7 @@ export const xpStyles = StyleSheet.create({
     marginTop: 8,
   },
   disconnectPolarButtonText: {
-    color: '#FFFFFF',
+    color: white,
     fontSize: 16,
     fontWeight: '600',
   },

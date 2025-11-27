@@ -9,6 +9,7 @@ import {
   Dimensions 
 } from 'react-native';
 import { Creature } from '../../src/types/polar';
+import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
 
 interface CreatureUnlockModalProps {
   visible: boolean;
@@ -22,16 +23,6 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
   onClose
 }) => {
   if (creatures.length === 0) return null;
-
-  const getRarityColor = (type: Creature['rarity']) => {
-    switch (type) {
-      case 'common': return '#9CA3AF';
-      case 'rare': return '#3B82F6';
-      case 'epic': return '#8B5CF6';
-      case 'legendary': return '#F59E0B';
-      default: return '#9CA3AF';
-    }
-  };
 
   return (
     <Modal
@@ -56,14 +47,26 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
               >
                 <View style={styles.creatureHeader}>
                   <Text style={styles.creatureName}>{creature.name}</Text>
-                  <Text 
-                    style={[
-                      styles.rarityBadge,
-                      { backgroundColor: getRarityColor(creature.rarity) }
-                    ]}
-                  >
-                    {creature.rarity.toUpperCase()}
-                  </Text>
+                  <View style={styles.creatureHeader2}>
+                    <Text 
+                      style={[
+                        styles.rarity,
+                        { color: getRarityColor(creature.rarity) }
+                      ]}
+                    >
+                      {creature.rarity.toUpperCase()}
+                    </Text>
+                    <Text 
+                      style={[
+                        styles.sportBadge,
+                        { backgroundColor: getSportColor(creature.sport)[0],
+                          color: getSportColor(creature.sport)[1] 
+                        }
+                      ]}
+                    >
+                      {creature.sport}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.statsRow}>
@@ -102,13 +105,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: white,
     borderRadius: 20,
     padding: 24,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: black,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -120,7 +123,7 @@ const styles = StyleSheet.create({
   congratsText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -147,13 +150,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  creatureHeader2: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
   creatureName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
     flex: 1,
   },
-  rarityBadge: {
+  rarity: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sportBadge: {
+    fontSize: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
@@ -174,7 +187,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: black,
   },
   closeButton: {
     backgroundColor: '#3B82F6',
