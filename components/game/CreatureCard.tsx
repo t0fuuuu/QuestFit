@@ -3,6 +3,10 @@ import { View, Text, Pressable } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureCardStyles as styles } from '@/src/styles/components/creatureCardStyles';
 
+// ayd stuff, but i made stylesheets 
+// import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
+
+
 interface CreatureCardProps {
   creature: Creature;
   onPress?: () => void;
@@ -10,15 +14,6 @@ interface CreatureCardProps {
 }
 
 export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, captured = false }) => {
-  const getRarityColor = (type: Creature['rarity']) => {
-    switch (type) {
-      case 'common': return '#9CA3AF';
-      case 'rare': return '#3B82F6';
-      case 'epic': return '#8B5CF6';
-      case 'legendary': return '#F59E0B';
-      default: return '#9CA3AF';
-    }
-  };
 
   return (
     <Pressable 
@@ -27,9 +22,16 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
     >
       <View style={styles.header}>
         <Text style={styles.name}>{creature.name}</Text>
-        <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
-          {creature.rarity.toUpperCase()}
-        </Text>
+        <View style={styles.header}>
+          <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
+            {creature.rarity.toUpperCase()}
+          </Text>
+          <Text style={[styles.sportBadge, { 
+            backgroundColor: getSportColor(creature.sport)[0], 
+            color: getSportColor(creature.sport)[1] }]}>
+            {creature.sport}
+          </Text>
+        </View>
       </View>
       
       <View style={styles.stats}>

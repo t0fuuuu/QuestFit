@@ -23,16 +23,6 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
 }) => {
   if (creatures.length === 0) return null;
 
-  const getRarityColor = (type: Creature['rarity']) => {
-    switch (type) {
-      case 'common': return '#9CA3AF';
-      case 'rare': return '#3B82F6';
-      case 'epic': return '#8B5CF6';
-      case 'legendary': return '#F59E0B';
-      default: return '#9CA3AF';
-    }
-  };
-
   return (
     <Modal
       animationType="fade"
@@ -56,14 +46,26 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
               >
                 <View style={styles.creatureHeader}>
                   <Text style={styles.creatureName}>{creature.name}</Text>
-                  <Text 
-                    style={[
-                      styles.rarityBadge,
-                      { backgroundColor: getRarityColor(creature.rarity) }
-                    ]}
-                  >
-                    {creature.rarity.toUpperCase()}
-                  </Text>
+                  <View style={styles.creatureHeader2}>
+                    <Text 
+                      style={[
+                        styles.rarity,
+                        { color: getRarityColor(creature.rarity) }
+                      ]}
+                    >
+                      {creature.rarity.toUpperCase()}
+                    </Text>
+                    <Text 
+                      style={[
+                        styles.sportBadge,
+                        { backgroundColor: getSportColor(creature.sport)[0],
+                          color: getSportColor(creature.sport)[1] 
+                        }
+                      ]}
+                    >
+                      {creature.sport}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={styles.statsRow}>
