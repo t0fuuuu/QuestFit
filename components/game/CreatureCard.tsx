@@ -3,10 +3,6 @@ import { View, Text, StyleSheet, Pressable, Dimensions } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureCardStyles as styles } from '@/src/styles/components/creatureCardStyles';
 
-// ayd stuff, but i made stylesheets 
-// import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
-
-
 interface CreatureCardProps {
   creature: Creature;
   onPress?: () => void;
