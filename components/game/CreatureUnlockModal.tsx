@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureUnlockModalStyles as styles } from '@/src/styles/components/creatureUnlockModalStyles';
+import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 
 interface CreatureUnlockModalProps {
   visible: boolean;
@@ -46,7 +47,7 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
               >
                 <View style={styles.creatureHeader}>
                   <Text style={styles.creatureName}>{creature.name}</Text>
-                  <View style={styles.creatureHeader2}>
+                  <View style={[styles.creatureHeader, {marginBottom: 0}]}>
                     <Text 
                       style={[
                         styles.rarity,

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, FlatList, Platform } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import Colors from '@/constants/Colors';
-import { getRarityColor, getSportColor } from '@/constants/Colors';
+import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import { db } from '@/src/services/firebase';
@@ -262,7 +262,11 @@ export default function XPManagementScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView 
+      showsVerticalScrollIndicator={false} // Hide vertical scrollbar
+      showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
+      style={styles.container} 
+      contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>Me</Text>
           <Text style={styles.subtitle}>Manage your Profile</Text>

@@ -1,4 +1,27 @@
 import { StyleSheet } from 'react-native';
+import { Creature } from '@/src/types/polar';
+
+export const getRarityColor = (type: Creature['rarity']) => {
+  switch (type) {
+  case 'rare': return '#43C073';
+  case 'epic': return '#8B5CF6';
+  case 'legendary': return '#F59E0B';
+  default: return '#3BA8F6';
+  }
+};
+
+export const getSportColor = (type: Creature['sport']) => {
+  switch (type) {
+    case 'RUNNING': return ['#AE0000', '#FFFFFF'];
+    case 'SWIMMING': return ['#53E8f6', '#1F2937'];
+    case 'HIKING': return ['#13780E', '#FFFFFF'];
+    case 'FITNESS': return ['#FB008A', '#FFFFFF'];
+    case 'CYCLING': return ['#FFF42A', '#1F2937'];
+    case 'CIRCUIT': return ['#BB00FF', '#FFFFFF'];
+    default: return ['#676767', '#FFFFFF'];
+  }
+};
+
 
 export const creatureCardStyles = StyleSheet.create({
   container: {
@@ -30,6 +53,13 @@ export const creatureCardStyles = StyleSheet.create({
   rarity: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  sportBadge: {
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   stats: {
     flexDirection: 'row',
@@ -78,5 +108,25 @@ export const creatureCardStyles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 4,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+  },
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 8,
+    margin: 8,
+    borderWidth: 2,
+    shadowColor: '#1F2937',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
 });

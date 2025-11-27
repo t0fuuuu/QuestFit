@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, FlatList } from 'react-native';
+import { ScrollView } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { CreatureCard } from '@/components/game/CreatureCard';
+import { CreatureCard, CreatureCardGrid } from '@/components/game/CreatureCard';
 import { twoStyles as styles } from '@/src/styles';
 import creatureService from '@/src/services/creatureService';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
@@ -16,48 +16,50 @@ export default function CreaturesScreen() {
   const capturedCreatureIds = profile?.capturedCreatures || [];
   
   useEffect(() => {
-    // load only locked/uncaptured creatures
-    const locked = creatureService.getLockedCreatures(capturedCreatureIds);
-    setAllCreatures(locked);
+    // load all creatures, with locked creatures first
+    const creatures = creatureService.getAllCreatures();
+    setAllCreatures(creatures);
   }, [capturedCreatureIds.length]);
 
-  const lockedCreatures = allCreatures;
-
-  const renderCreature = ({ item }: { item: Creature }) => (
-    <CreatureCard
-      creature={item}
-      captured={false} // all shown here are locked
-      onPress={() => {
+  const cards = creatureService.getAllCreatures().map(creature => ({
+    creature: creature,
+    captured: capturedCreatureIds.includes(creature.id),
+    onPress: (() => {
         // handle creature selection zzzzzzzzzzzzzzzzzzzzzzzzzz sleeeeep
-        console.log('Selected creature:', item.name);
-        const lore = creatureService.getCreatureLore(item.id);
+        console.log('Selected creature:', creature.name);
+        const lore = creatureService.getCreatureLore(creature.id);
         if (lore) {
           console.log('Lore:', lore);
         }
-      }}
-    />
-  );
+      })
+  }))
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Locked Creatures</Text>
+        <Text style={styles.title}>Creatures</Text>
         <Text style={styles.subtitle}>
-          Complete workout challenges to unlock these creatures!
+          View your captured creatures here. Complete workout challenges to unlock even more creatures!
         </Text>
         <Text style={styles.stats}>
-          {capturedCreatureIds.length} captured, {lockedCreatures.length} remaining
+          {capturedCreatureIds.length} captured, {allCreatures.length-capturedCreatureIds.length} remaining
         </Text>
       </View>
-      
-      <FlatList
-        data={lockedCreatures}
-        renderItem={renderCreature}
-        keyExtractor={(item) => item.id}
-        numColumns={1}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+      <ScrollView 
+      showsVerticalScrollIndicator={false} // Hide vertical scrollbar
+      showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
+      >
+      <CreatureCardGrid
+      cards={cards}
+      onPress={(id) => {
+        console.log("Pressed card", cards[id]);
+        const lore = cards[id].creature.lore;
+            if (lore) {
+              console.log('Lore:', lore);
+            }
+      }}
       />
+      </ScrollView>
     </View>
   );
 }

@@ -47,6 +47,14 @@ class CreatureService {
       .filter(c => !capturedIds.includes(c.id));
   }
 
+  /**
+   * Get only unlocked/captured creatures
+   */
+  getUnlockedCreatures(capturedIds: string[]): Creature[] {
+    return this.creatures
+      .filter(c => capturedIds.includes(c.id));
+  }
+
   // Checks a workout to see if it unlocked any new creatures for the user
   checkWorkoutForUnlocks(workoutData: {
     calories: number;
