@@ -47,7 +47,7 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
               >
                 <View style={styles.creatureHeader}>
                   <Text style={styles.creatureName}>{creature.name}</Text>
-                  <View style={styles.creatureHeader2}>
+                  <View style={[styles.creatureHeader, {marginBottom: 0}]}>
                     <Text 
                       style={[
                         styles.rarity,
@@ -149,11 +149,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  creatureHeader2: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
   },
   creatureName: {
     fontSize: 18,

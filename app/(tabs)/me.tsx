@@ -262,7 +262,11 @@ export default function XPManagementScreen() {
 
   return (
     <>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <ScrollView 
+      showsVerticalScrollIndicator={false} // Hide vertical scrollbar
+      showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
+      style={styles.container} 
+      contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
           <Text style={styles.title}>Me</Text>
           <Text style={styles.subtitle}>Manage your Profile</Text>
