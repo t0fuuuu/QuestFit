@@ -1,7 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { Creature } from '../../src/types/polar';
-import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
+import { creatureCardStyles as styles } from '@/src/styles/components/creatureCardStyles';
+
+// ayd stuff, but i made stylesheets 
+// import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
+
 
 interface CreatureCardProps {
   creature: Creature;
@@ -69,91 +73,3 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
     </Pressable>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: white,
-    borderRadius: 12,
-    padding: 16,
-    margin: 8,
-    borderWidth: 2,
-    shadowColor: black,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  name: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: black,
-  },
-  rarity: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sportBadge: {
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  stats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: black,
-  },
-  capturedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#10B981',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  capturedText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  requirements: {
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingTop: 12,
-  },
-  requirementsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: black,
-    marginBottom: 8,
-  },
-  requirement: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-});

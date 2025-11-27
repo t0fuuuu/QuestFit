@@ -3,13 +3,12 @@ import {
   Modal, 
   View, 
   Text, 
-  StyleSheet, 
   Pressable, 
   Animated,
   Dimensions 
 } from 'react-native';
 import { Creature } from '../../src/types/polar';
-import { getRarityColor, getSportColor, black, white } from '@/constants/Colors';
+import { creatureUnlockModalStyles as styles } from '@/src/styles/components/creatureUnlockModalStyles';
 
 interface CreatureUnlockModalProps {
   visible: boolean;
@@ -95,111 +94,3 @@ export const CreatureUnlockModal: React.FC<CreatureUnlockModalProps> = ({
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  container: {
-    backgroundColor: white,
-    borderRadius: 20,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: black,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  congratsText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: black,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 24,
-    textAlign: 'center',
-  },
-  creaturesContainer: {
-    width: '100%',
-    marginBottom: 24,
-  },
-  creatureCard: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 2,
-  },
-  creatureHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  creatureHeader2: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center'
-  },
-  creatureName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: black,
-    flex: 1,
-  },
-  rarity: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  sportBadge: {
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginLeft: 8,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  stat: {
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: black,
-  },
-  closeButton: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 24,
-    minWidth: 150,
-  },
-  closeButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-});
