@@ -3,9 +3,7 @@ import {
   Modal, 
   View, 
   Text, 
-  Pressable, 
-  Animated,
-  Dimensions 
+  Pressable
 } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureUnlockModalStyles as styles } from '@/src/styles/components/creatureUnlockModalStyles';

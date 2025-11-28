@@ -13,63 +13,70 @@ interface CreatureCardProps {
 export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, captured = false }) => {
 
   return (
-    <Pressable 
-      style={[styles.container, { borderColor: getRarityColor(creature.rarity) }]}
-      onPress={onPress}
-    >
+    <View>
       <View style={styles.header}>
-        <Text style={styles.name}>{creature.name}</Text>
-        <View style={styles.header}>
-          <Text style={[styles.rarity, { color: getRarityColor(creature.rarity) }]}>
+          <Text style={styles.name}>{creature.name}</Text>
+          <View style={styles.header}>
+          <Text style={[
+            styles.rarity,
+            { color: getRarityColor(creature.rarity) }
+          ]}>
             {creature.rarity.toUpperCase()}
-          </Text>
-          <Text style={[styles.sportBadge, { 
-            backgroundColor: getSportColor(creature.sport)[0], 
-            color: getSportColor(creature.sport)[1] }]}>
-            {creature.sport}
-          </Text>
+            </Text>
+            <Text style={[
+              styles.sportBadge,
+              { backgroundColor: getSportColor(creature.sport)[0],
+                color: getSportColor(creature.sport)[1] 
+              }
+            ]}>
+              {creature.sport}
+            </Text>
+          </View>
+        </View>
+        <View>
+          {captured && (
+            <Image 
+              source={require('../../assets/images/creatures/placeholder.png')} 
+              style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated' } as any} 
+            />
+          )}
+          {!captured && (
+            <Image 
+              source={require('../../assets/images/creatures/placeholder.png')} 
+              style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated', filter: "grayscale(100%)" } as any} 
+            />
+          )}
+        </View>
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statLabel}>⚔️ Power</Text>
+            <Text style={styles.statValue}>{creature.stats.power}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Text style={styles.statLabel}>⚡ Speed</Text>
+              <Text style={styles.statValue}>{creature.stats.speed}</Text>
+              </View>
+              <View style={styles.stat}>
+                <Text style={styles.statLabel}>🛡️ Endurance</Text>
+                <Text style={styles.statValue}>{creature.stats.endurance}</Text>
+              </View>
+            </View>
+            <View style={styles.border}>
+              <View style={styles.header}>
+              <Text style={styles.desc}>{creature.description}</Text>
+              {captured && (
+              <View style={styles.capturedBadge}>
+                <Text style={styles.capturedText}>CAPTURED!</Text>
+              </View>
+              )}
+              {!captured && (
+              <View style={styles.lockedBadge}>
+                <Text style={styles.capturedText}>LOCKED</Text>
+              </View>
+              )}
         </View>
       </View>
-      
-      <View style={styles.stats}>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>⚔️ Power</Text>
-          <Text style={styles.statValue}>{creature.stats.power}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>⚡ Speed</Text>
-          <Text style={styles.statValue}>{creature.stats.speed}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statLabel}>💪 Endurance</Text>
-          <Text style={styles.statValue}>{creature.stats.endurance}</Text>
-        </View>
-      </View>
-
-      {captured && (
-        <View style={styles.capturedBadge}>
-          <Text style={styles.capturedText}>CAPTURED!</Text>
-        </View>
-      )}
-
-      {!captured && (
-        <View style={styles.border}>
-          <Text style={styles.requirementsTitle}>Requirements:</Text>
-          {creature.unlockRequirements.minCalories && (
-            <Text style={styles.requirement}>• {creature.unlockRequirements.minCalories} calories</Text>
-          )}
-          {creature.unlockRequirements.minDistance && (
-            <Text style={styles.requirement}>• {(creature.unlockRequirements.minDistance / 1000).toFixed(1)}km distance</Text>
-          )}
-          {creature.unlockRequirements.minDuration && (
-            <Text style={styles.requirement}>• {creature.unlockRequirements.minDuration} minutes</Text>
-          )}
-          {creature.sport != 'NEUTRAL' && (
-            <Text style={styles.requirement}>• {creature.sport} workout</Text>
-          )}
-        </View>
-        )}
-    </Pressable>
+    </View>
   );
 };
 
@@ -111,50 +118,10 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
         }]}
         onPress={() => onPress?.(parseInt(card.creature.id))}
         >
-        <View style={styles.header}>
-          <Text style={styles.name}>{card.creature.name}</Text>
-          <View style={styles.header}>
-          <Text style={[
-            styles.rarity,
-            { color: getRarityColor(card.creature.rarity) }
-          ]}
-          >
-            {card.creature.rarity.toUpperCase()}
-            </Text>
-            <Text style={[
-              styles.sportBadge,
-              { backgroundColor: getSportColor(card.creature.sport)[0],
-                color: getSportColor(card.creature.sport)[1] 
-              }
-            ]}
-            >
-              {card.creature.sport}
-            </Text>
-          </View>
-        </View>
-        <View>
-          <Image 
-            source={require('../../assets/images/creatures/placeholder.png')} 
-            style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated' } as any} 
+          <CreatureCard 
+            creature={card.creature} 
+            captured={card.captured} 
           />
-        </View>
-        <View style={styles.stats}>
-          <View style={styles.stat}>
-            <Text style={styles.statLabel}>⚔️ Power</Text>
-            <Text style={styles.statValue}>{card.creature.stats.power}</Text>
-            </View>
-            <View style={styles.stat}>
-              <Text style={styles.statLabel}>⚡ Speed</Text>
-              <Text style={styles.statValue}>{card.creature.stats.speed}</Text>
-              </View>
-              <View style={styles.stat}>
-                <Text style={styles.statLabel}>🛡️ Endurance</Text>
-                <Text style={styles.statValue}>{card.creature.stats.endurance}</Text>
-              </View>
-            </View>
-            <View style={styles.border}>
-              <Text style={styles.desc}>{card.creature.description}</Text>
-            </View>
       </Pressable>
       </View>
       ))}

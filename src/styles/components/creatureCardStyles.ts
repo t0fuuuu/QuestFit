@@ -49,6 +49,10 @@ export const creatureCardStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1F2937',
   },
+  id: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
   rarity: {
     fontSize: 12,
     fontWeight: '600',
@@ -79,10 +83,17 @@ export const creatureCardStyles = StyleSheet.create({
     color: '#1F2937',
   },
   capturedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    marginLeft: 8,
+    marginTop: -8,
     backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  lockedBadge: {
+    marginLeft: 8,
+    marginTop: -8,
+    backgroundColor: '#EF4444',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -95,7 +106,7 @@ export const creatureCardStyles = StyleSheet.create({
   border: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    paddingTop: 12,
+    paddingTop: 12
   },
   desc: {
     fontSize: 12,
