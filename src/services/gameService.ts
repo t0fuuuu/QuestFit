@@ -135,14 +135,13 @@ class GameService {
     const userProfile = await this.getUserProfile(userId);
     if (userProfile) {
       const newXP = userProfile.xp + experience;
-      const newLevel = calculateLevel(newXP); // using eqn for leveling now
+      // Levels are disabled, just update XP
       
       await this.updateUserProfile(userId, { 
-        xp: newXP, 
-        level: Math.max(userProfile.level, newLevel) 
+        xp: newXP
       });
       
-      return newLevel;
+      return 1; // Always return level 1
     }
     return 1;
   }

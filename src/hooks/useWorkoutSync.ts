@@ -97,17 +97,13 @@ export const useWorkoutSync = (userId: string | null) => {
     const experience = WorkoutProcessor.calculateExperience(workout);
     const foundCreatures = WorkoutProcessor.findAvailableCreatures(workout, availableCreatures);
     
-    const currentProfile = await gameService.getUserProfile(userId);
-    const currentLevel = currentProfile?.level || 1;
-    
-    // Add experience and check for level up
-    const newLevel = await gameService.addExperience(userId, experience);
-    const levelUp = newLevel > currentLevel;
+    // Add experience
+    await gameService.addExperience(userId, experience);
 
     return {
       experience,
       creatures: foundCreatures,
-      levelUp
+      levelUp: false
     };
   }, [userId]);
 

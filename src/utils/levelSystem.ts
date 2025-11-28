@@ -6,44 +6,21 @@
 // @param level - the current level you're on
 // @returns XP needed to reach the next level
 function xpToNext(level: number): number {
-  return Math.round(80 * Math.pow(level, 1.3) + 150);
+  return 0;
 }
 
 // figures out how much total XP you need to hit a certain level
 // @param level - which level you're trying to reach (like level 5)
 // @returns the total amount of XP needed from the start
 export function getXPForLevel(level: number): number {
-  if (level <= 1) return 0;
-  
-  // add up all the XP requirements for each level
-  let totalXP = 0;
-  for (let lvl = 1; lvl < level; lvl++) {
-    totalXP += xpToNext(lvl);
-  }
-  
-  return totalXP;
+  return 0;
 }
 
 // works backwards from your XP to figure out what level you should be
 // @param xp - how much total XP you've earned
 // @returns your current level
 export function calculateLevel(xp: number): number {
-  if (xp < 100) return 1;
-  
-  let level = 1;
-  let requiredXP = 0;
-  
-  // keep bumping up the level until we go past the player's XP
-  while (true) {
-    const nextLevelXP = getXPForLevel(level + 1);
-    if (xp >= nextLevelXP) {
-      level++;
-    } else {
-      break;
-    }
-  }
-  
-  return level;
+  return 1;
 }
 
 // tells you how much more XP you need to level up
@@ -51,15 +28,14 @@ export function calculateLevel(xp: number): number {
 // @param currentLevel - what level you're currently at
 // @returns the XP gap to the next level
 export function getXPToNextLevel(currentXP: number, currentLevel: number): number {
-  const nextLevelXP = getXPForLevel(currentLevel + 1);
-  return Math.max(0, nextLevelXP - currentXP);
+  return 0;
 }
 
 // Gets the XP requirement for leveling up (not your progress, just the requirement)
 // @param currentLevel - the level you're on
 // @returns how much XP that specific level jump costs
 export function getXPRequiredForNextLevel(currentLevel: number): number {
-  return xpToNext(currentLevel);
+  return 0;
 }
 
 // Calcualtes your progress bar percentage towards next level
@@ -67,10 +43,5 @@ export function getXPRequiredForNextLevel(currentLevel: number): number {
 // @param currentLevel - what level you're at
 // @returns a number between 0 and 1 for the progress bar
 export function getLevelProgress(currentXP: number, currentLevel: number): number {
-  const currentLevelXP = getXPForLevel(currentLevel);
-  const nextLevelXP = getXPForLevel(currentLevel + 1);
-  const xpInCurrentLevel = currentXP - currentLevelXP;
-  const xpNeededForLevel = nextLevelXP - currentLevelXP;
-  
-  return Math.min(1, Math.max(0, xpInCurrentLevel / xpNeededForLevel));
+  return 0;
 }

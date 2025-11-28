@@ -53,13 +53,11 @@ export const useGameProfile = (userId: string | null) => {
     if (!userId) return;
 
     try {
-      const newLevel = await gameService.addExperience(userId, experience);
+      await gameService.addExperience(userId, experience);
       
       // reload the profile so we have the latest data
       const updatedProfile = await gameService.getUserProfile(userId);
       setProfile(updatedProfile);
-      
-      return newLevel;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add experience');
     }
