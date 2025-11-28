@@ -12,7 +12,6 @@ interface WorkoutCompletionResult {
   bonusXP: number;
   totalXP: number;
   unlockedCreatures: Creature[];
-  newLevel?: number;
   workoutSession: WorkoutSession;
 }
 
@@ -77,8 +76,8 @@ class WorkoutCompletionService {
       // save everything to firebase
       await this.saveWorkoutToFirebase(userId, workoutSession, unlockedCreatures, totalXP);
       
-      // give them the XP and see if they leveled up
-      const newLevel = await gameService.addExperience(userId, totalXP);
+      // give them the XP
+      await gameService.addExperience(userId, totalXP);
       
       return {
         success: true,
@@ -86,7 +85,6 @@ class WorkoutCompletionService {
         bonusXP,
         totalXP,
         unlockedCreatures,
-        newLevel,
         workoutSession
       };
     } catch (error) {
@@ -158,8 +156,8 @@ class WorkoutCompletionService {
       // save it all to firebase
       await this.saveWorkoutToFirebase(userId, workoutSession, unlockedCreatures, totalXP);
       
-      // award the XP and check if they leveled
-      const newLevel = await gameService.addExperience(userId, totalXP);
+      // award the XP
+      await gameService.addExperience(userId, totalXP);
       
       return {
         success: true,
@@ -167,7 +165,7 @@ class WorkoutCompletionService {
         bonusXP,
         totalXP,
         unlockedCreatures,
-        newLevel,
+        newLevel: 1,
         workoutSession
       };
     } catch (error) {
@@ -195,7 +193,7 @@ class WorkoutCompletionService {
         // if this is somehow their first workout we need to create the user doc
         await setDoc(userRef, {
           xp: totalXP,
-          level: calculateLevel(totalXP),
+          level: 1,
           totalWorkouts: 1,
           totalCalories: workoutSession.calories,
           totalDistance: workoutSession.distance,
@@ -224,10 +222,6 @@ class WorkoutCompletionService {
         // recalculate average heart rate
         const newAvgHR = ((currentAvgHR * currentWorkouts) + workoutSession.avgHeartRate) / (currentWorkouts + 1);
         
-        // figure out their new level
-        const newTotalXP = (currentData.xp || 0) + totalXP;
-        const newLevel = calculateLevel(newTotalXP);
-        
         await updateDoc(userRef, {
           xp: increment(totalXP),
           totalWorkouts: increment(1),
@@ -245,11 +239,6 @@ class WorkoutCompletionService {
             avgHeartRate: workoutSession.avgHeartRate
           })
         });
-        
-        // update the level if they leveled up
-        if (newLevel > (currentData.level || 1)) {
-          await updateDoc(userRef, { level: newLevel });
-        }
       }
       
       // add any newly captured creatures to their profile
@@ -288,11 +277,6 @@ class WorkoutCompletionService {
       result.unlockedCreatures.forEach(c => {
         lines.push(`  • ${c.name} (${c.type})`);
       });
-    }
-    
-    if (result.newLevel) {
-      lines.push(``);
-      lines.push(`🆙 Level Up! Now Level ${result.newLevel}`);
     }
     
     return lines.join('\n');

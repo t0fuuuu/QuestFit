@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ScrollView, Pressable, ActivityIndicator, Alert, FlatList } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useMultiDeviceWorkout } from '@/src/hooks/useMultiDeviceWorkout';
@@ -7,6 +7,8 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { Device } from 'react-native-ble-plx';
 import { liveStyles as styles } from '@/src/styles';
 import { DeviceHeartRateCard } from '@/components/fitness/DeviceHeartRateCard';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/src/services/firebase';
 
 export default function MultiDeviceLiveWorkoutScreen() {
   const colorScheme = useColorScheme();
@@ -32,10 +34,45 @@ export default function MultiDeviceLiveWorkoutScreen() {
     endWorkout,
     checkBluetoothStatus,
   } = useMultiDeviceWorkout();
+  const [deviceOwners, setDeviceOwners] = useState<Record<string, string>>({});
 
   useEffect(() => {
     checkBluetoothStatus();
   }, []);
+
+  useEffect(() => {
+    const fetchDeviceOwners = async () => {
+      if (availableDevices.length === 0) return;
+
+      try {
+        const deviceIds = availableDevices.map(d => d.id);
+        // Firestore 'in' query limit is 10
+        const chunks = [];
+        for (let i = 0; i < deviceIds.length; i += 10) {
+          chunks.push(deviceIds.slice(i, i + 10));
+        }
+
+        const newOwners: Record<string, string> = {};
+
+        for (const chunk of chunks) {
+          const q = query(collection(db, 'users'), where('deviceId', 'in', chunk));
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.deviceId && data.displayName) {
+              newOwners[data.deviceId] = data.displayName;
+            }
+          });
+        }
+
+        setDeviceOwners(prev => ({ ...prev, ...newOwners }));
+      } catch (error) {
+        console.error('Error fetching device owners:', error);
+      }
+    };
+
+    fetchDeviceOwners();
+  }, [availableDevices.length]); // Re-run when new devices are found
 
   const handleScan = async () => {
     if (!bluetoothEnabled) {
@@ -130,18 +167,27 @@ export default function MultiDeviceLiveWorkoutScreen() {
     }
   };
 
-  const renderDevice = ({ item }: { item: Device }) => (
-    <Pressable
-      style={styles.deviceItem}
-      onPress={() => handleConnect(item)}
-    >
-      <View style={styles.deviceInfo}>
-        <Text style={styles.deviceName}>{item.name || 'Unknown Device'}</Text>
-        <Text style={styles.deviceId}>{item.id}</Text>
-      </View>
-      <Text style={styles.connectText}>Connect →</Text>
-    </Pressable>
-  );
+  const renderDevice = ({ item }: { item: Device }) => {
+    const ownerName = deviceOwners[item.id];
+    
+    return (
+      <Pressable
+        style={styles.deviceItem}
+        onPress={() => handleConnect(item)}
+      >
+        <View style={styles.deviceInfo}>
+          <Text style={styles.deviceName}>
+            {ownerName 
+              ? `${ownerName}'s ${item.name || 'Device'}`
+              : (item.name || 'Unknown Device')
+            }
+          </Text>
+          {!ownerName && <Text style={styles.deviceId}>{item.id}</Text>}
+        </View>
+        <Text style={styles.connectText}>Connect →</Text>
+      </Pressable>
+    );
+  };
 
   // Calculate aggregate heart rate from all devices
   const aggregateHeartRate = connectedDevices.length > 0 
