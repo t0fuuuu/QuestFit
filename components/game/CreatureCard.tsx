@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, Dimensions } from 'react-native';
+import { View, Text, Pressable, Dimensions, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Creature } from '../../src/types/polar';
 import { creatureCardStyles as styles, getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 
 interface CreatureCardProps {
   creature: Creature;
-  onPress?: () => void;
   captured?: boolean;
 }
 
-export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, captured = false }) => {
+export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, captured = false }) => {
 
   return (
-    <View>
+    <View style={{ width: '100%' }}>
       <View style={styles.header}>
-          <Text style={styles.name}>{creature.name}</Text>
+          <Text style={styles.name}>
+            {creature.name}{" "}
+            <Text style={styles.id}>#{creature.id}</Text>
+          </Text>
           <View style={styles.header}>
           <Text style={[
             styles.rarity,
@@ -61,29 +63,13 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, onPress, c
                 <Text style={styles.statValue}>{creature.stats.endurance}</Text>
               </View>
             </View>
-            <View style={styles.border}>
-              <View style={styles.header}>
-              <Text style={styles.desc}>{creature.description}</Text>
-              {captured && (
-              <View style={styles.capturedBadge}>
-                <Text style={styles.capturedText}>CAPTURED!</Text>
-              </View>
-              )}
-              {!captured && (
-              <View style={styles.lockedBadge}>
-                <Text style={styles.capturedText}>LOCKED</Text>
-              </View>
-              )}
-        </View>
       </View>
-    </View>
   );
 };
 
 interface CardGridProps {
   cards: CreatureCardProps[];
   onPress?: (id: number) => void;
-  area?: number;
   minCardWidth?: number;
 }
 
@@ -122,9 +108,93 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
             creature={card.creature} 
             captured={card.captured} 
           />
+          <View style={styles.border}>
+            <View style={styles.header}>
+              <Text style={styles.desc}>{card.creature.description}</Text>
+              {card.captured && (
+              <View style={styles.capturedBadge}>
+                <Text style={styles.capturedText}>CAPTURED!</Text>
+              </View>
+              )}
+              {!card.captured && (
+              <View style={styles.lockedBadge}>
+                <Text style={styles.capturedText}>LOCKED</Text>
+              </View>
+              )}
+            </View>
+          </View>
       </Pressable>
       </View>
       ))}
     </View>
   );
 }
+
+interface CreatureDetailsModalProps {
+  visible: boolean;
+  creature: Creature;
+  captured: boolean;
+  onClose: () => void;
+}
+
+export const CreatureDetailsModal: React.FC<CreatureDetailsModalProps> = ({
+  visible,
+  creature,
+  captured,
+  onClose
+}) => {
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.overlay}>
+        <View style={[styles.modal, {borderColor: getRarityColor(creature.rarity)}]}>
+          <CreatureCard 
+            creature={creature} 
+            captured={captured}
+          />
+          <View style={styles.border}>
+              {captured && (
+                <View style={styles.header}>
+                  <Text style={styles.desc}>{creature.lore}</Text>
+                  <View style={styles.capturedBadge}>
+                    <Text style={styles.capturedText}>CAPTURED!</Text>
+                  </View>
+                </View>
+              )}
+              {!captured && (
+                <View>
+                  <View style={styles.header}>
+                    <Text style={styles.requirementsTitle}>Unlock Requirements:</Text>
+                    <View style={styles.lockedBadge}>
+                      <Text style={styles.capturedText}>LOCKED</Text>
+                    </View>
+                  </View>
+                    {creature.unlockRequirements.minCalories && (
+                      <Text style={styles.requirement}>• {creature.unlockRequirements.minCalories} calories</Text>
+                    )}
+                    {creature.unlockRequirements.minDistance && (
+                      <Text style={styles.requirement}>• {(creature.unlockRequirements.minDistance / 1000).toFixed(1)}km distance</Text>
+                    )}
+                    {creature.unlockRequirements.minDuration && (
+                      <Text style={styles.requirement}>• {creature.unlockRequirements.minDuration} minutes</Text>
+                    )}
+                    {creature.sport != 'NEUTRAL' && (
+                      <Text style={styles.requirement}>• {creature.sport} workout</Text>
+                    )}
+                </View>
+              )}
+          </View>
+          <Pressable style={styles.closeButton} onPress={onClose}>
+            <Text style={styles.closeButtonText}>Close</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { CreatureCard, CreatureCardGrid } from '@/components/game/CreatureCard';
+import { CreatureDetailsModal, CreatureCardGrid } from '@/components/game/CreatureCard';
 import { twoStyles as styles } from '@/src/styles';
 import creatureService from '@/src/services/creatureService';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
@@ -14,24 +14,20 @@ export default function CreaturesScreen() {
   const [allCreatures, setAllCreatures] = useState<Creature[]>([]);
 
   const capturedCreatureIds = profile?.capturedCreatures || [];
+
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [selectedCreature, setSelectedCreature] = useState(creatureService.getAllCreatures()[0]);
+  const [selectedCaptured, setSelectedCaptured] = useState(false);
   
   useEffect(() => {
-    // load all creatures, with locked creatures first
+    // load all creatures by ID
     const creatures = creatureService.getAllCreatures();
     setAllCreatures(creatures);
   }, [capturedCreatureIds.length]);
 
   const cards = creatureService.getAllCreatures().map(creature => ({
     creature: creature,
-    captured: capturedCreatureIds.includes(creature.id),
-    onPress: (() => {
-        // handle creature selection zzzzzzzzzzzzzzzzzzzzzzzzzz sleeeeep
-        console.log('Selected creature:', creature.name);
-        const lore = creatureService.getCreatureLore(creature.id);
-        if (lore) {
-          console.log('Lore:', lore);
-        }
-      })
+    captured: capturedCreatureIds.includes(creature.id)
   }))
 
   return (
@@ -49,17 +45,29 @@ export default function CreaturesScreen() {
       showsVerticalScrollIndicator={false} // Hide vertical scrollbar
       showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
       >
+      
+      {/* Creature Card Grid */}
       <CreatureCardGrid
       cards={cards}
       onPress={(id) => {
-        console.log("Pressed card", cards[id]);
-        const lore = cards[id].creature.lore;
-            if (lore) {
-              console.log('Lore:', lore);
-            }
+        // handle creature selection
+        const card = cards[id-1];
+        setSelectedCreature(card.creature);
+        setSelectedCaptured(card.captured);
+        setShowUnlockModal(true);
       }}
       />
       </ScrollView>
+
+      {/* Creature Details Modal */}
+      <CreatureDetailsModal
+        visible={showUnlockModal}
+        creature={selectedCreature}
+        captured={selectedCaptured}
+        onClose={() => {
+          setShowUnlockModal(false);
+        }}
+      />
     </View>
   );
 }

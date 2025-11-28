@@ -42,20 +42,24 @@ export const creatureCardStyles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
+    alignSelf: 'center',
   },
   id: {
     fontSize: 12,
     color: '#6B7280',
+    alignSelf: 'center',
+    fontWeight: 'normal',
   },
   rarity: {
     fontSize: 12,
     fontWeight: '600',
+    alignSelf: 'center',
   },
   sportBadge: {
     fontSize: 12,
@@ -84,7 +88,6 @@ export const creatureCardStyles = StyleSheet.create({
   },
   capturedBadge: {
     marginLeft: 8,
-    marginTop: -8,
     backgroundColor: '#10B981',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -92,7 +95,6 @@ export const creatureCardStyles = StyleSheet.create({
   },
   lockedBadge: {
     marginLeft: 8,
-    marginTop: -8,
     backgroundColor: '#EF4444',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -106,7 +108,8 @@ export const creatureCardStyles = StyleSheet.create({
   border: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
-    paddingTop: 12
+    paddingTop: 12,
+    width: '100%',
   },
   desc: {
     fontSize: 12,
@@ -146,5 +149,43 @@ export const creatureCardStyles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  closeButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    marginBottom: -8,
+    marginTop: 8,
+    borderRadius: 24,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 3,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
 });

@@ -769,7 +769,7 @@ export const xpStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
-    marginLeft: 8,
+    marginTop: -6,
   },
   creatureStats: {
     flexDirection: 'row',
