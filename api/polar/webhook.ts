@@ -118,6 +118,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const date = startTime.split('T')[0];
                  console.log(`Processing EXERCISE for date: ${date}`);
                  
+                 // Update deviceId if present in the exercise data
+                 if (data.device_id) {
+                     console.log(`Updating deviceId for user ${userId} to ${data.device_id}`);
+                     await db.collection('users').doc(userId).set({
+                         deviceId: data.device_id
+                     }, { merge: true });
+                 }
+
                  const ref = userPolarRef.doc('exercises').collection('all').doc(date);
                  console.log(`Target Document: ${ref.path}`);
                  
