@@ -10,9 +10,9 @@ import { doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { xpStyles as styles } from '@/src/styles';
 import { Creature } from '@/src/types/polar';
 import creatureService from '@/src/services/creatureService';
-import { getXPToNextLevel, getXPForLevel } from '@/src/utils/levelSystem';
 import { polarOAuthService } from '@/src/services/polarOAuthService';
 import { ConsentModal } from '@/components/auth/ConsentModal';
+import { getNextReward, getRewardProgress } from '@/src/utils/rewardsSystem';
 
 interface WorkoutHistoryItem {
   sessionId: string;
@@ -25,7 +25,6 @@ export default function XPManagementScreen() {
   const colorScheme = useColorScheme();
   const { user, signOut } = useAuth();
   const [currentXP, setCurrentXP] = useState<number>(0);
-  const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [workoutHistory, setWorkoutHistory] = useState<WorkoutHistoryItem[]>([]);
   const [capturedCreatures, setCapturedCreatures] = useState<Creature[]>([]);
   const [totalWorkouts, setTotalWorkouts] = useState<number>(0);
@@ -42,6 +41,9 @@ export default function XPManagementScreen() {
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [consentLoading, setConsentLoading] = useState(false);
+
+  const nextReward = getNextReward(currentXP);
+  const progress = getRewardProgress(currentXP);
 
   useEffect(() => {
     if (user && !hasLoadedOnce) {
@@ -69,7 +71,6 @@ export default function XPManagementScreen() {
         if (userDoc.exists()) {
           const data = userDoc.data();
           setCurrentXP(data.xp || 0);
-          setCurrentLevel(data.level || 1);
           setTotalWorkouts(data.totalWorkouts || 0);
           setTotalCalories(data.totalCalories || 0);
           setTotalDuration(data.totalDuration || 0);
@@ -101,7 +102,6 @@ export default function XPManagementScreen() {
           // user doc doesnt exist yet - set defaults
           console.log('User document does not exist, using defaults');
           setCurrentXP(0);
-          setCurrentLevel(1);
           setTotalWorkouts(0);
           setTotalCalories(0);
           setTotalDuration(0);
@@ -115,7 +115,6 @@ export default function XPManagementScreen() {
         setError('Unable to access user data. Please check Firebase permissions.');
         // Set defaults when we can't access Firebase
         setCurrentXP(0);
-        setCurrentLevel(1);
         setTotalWorkouts(0);
         setTotalCalories(0);
         setTotalDuration(0);
@@ -307,17 +306,25 @@ export default function XPManagementScreen() {
 
         {/* Current XP Display */}
         <View style={styles.xpDisplaySection}>
-          <Text style={styles.xpLabel}>Level {currentLevel}</Text>
+          <Text style={styles.xpLabel}>Total Experience</Text>
           <View style={styles.xpDisplay}>
             <Text style={styles.xpValue}>{currentXP}</Text>
             <Text style={styles.xpUnit}>XP</Text>
             <Text style={styles.xpIcon}>⭐</Text>
           </View>
-          <View style={styles.progressInfo}>
-            <Text style={styles.progressText}>
-              Next level at {getXPForLevel(currentLevel + 1)} XP ({getXPToNextLevel(currentXP, currentLevel)} XP to go)
-            </Text>
-          </View>
+          
+          {nextReward && (
+            <View style={{ width: '100%', marginTop: 16 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ color: '#9CA3AF', fontSize: 14 }}>Next: {nextReward.name}</Text>
+                <Text style={{ color: '#9CA3AF', fontSize: 14 }}>{nextReward.xpThreshold - currentXP} XP to go</Text>
+              </View>
+              <View style={{ height: 8, backgroundColor: '#374151', borderRadius: 4, overflow: 'hidden' }}>
+                <View style={{ height: '100%', backgroundColor: '#3B82F6', width: `${progress * 100}%` }} />
+              </View>
+            </View>
+          )}
+
           <Pressable onPress={loadUserXP} style={styles.refreshButton}>
             <Text style={styles.refreshButtonText}>🔄 Refresh</Text>
           </Pressable>
@@ -334,10 +341,6 @@ export default function XPManagementScreen() {
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{totalCalories.toLocaleString()}</Text>
               <Text style={styles.statLabel}>Calories</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{currentLevel}</Text>
-              <Text style={styles.statLabel}>Level</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statValue}>{Math.round(totalDuration)}</Text>
@@ -467,7 +470,7 @@ export default function XPManagementScreen() {
         <View style={styles.section}>
           <Text style={styles.guideTitle}>💡 XP Guide</Text>
           <Text style={styles.guideText}>• Complete workouts to earn XP</Text>
-          <Text style={styles.guideText}>• Use XP to level up your creatures</Text>
+          <Text style={styles.guideText}>• Earn XP to unlock rewards</Text>
           <Text style={styles.guideText}>• Higher intensity = more XP earned</Text>
           <Text style={styles.guideText}>• Track your progress over time</Text>
         </View>

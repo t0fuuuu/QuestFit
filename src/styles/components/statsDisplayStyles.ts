@@ -26,17 +26,6 @@ export const statsDisplayStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1F2937',
   },
-  levelBadge: {
-    backgroundColor: '#3B82F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  levelText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   experienceSection: {
     marginBottom: 24,
   },
@@ -50,7 +39,7 @@ export const statsDisplayStyles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
-  nextLevelText: {
+  nextRewardText: {
     fontSize: 14,
     color: '#6B7280',
   },

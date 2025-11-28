@@ -1,16 +1,16 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { UserGameProfile } from '../../src/types/polar';
-import { getXPToNextLevel, getLevelProgress } from '../../src/utils/levelSystem';
 import { statsDisplayStyles as styles } from '@/src/styles/components/statsDisplayStyles';
+import { getNextReward, getRewardProgress } from '../../src/utils/rewardsSystem';
 
 interface StatsDisplayProps {
   profile: UserGameProfile;
 }
 
 export const StatsDisplay: React.FC<StatsDisplayProps> = ({ profile }) => {
-  const xpToNextLevel = getXPToNextLevel(profile.xp, profile.level);
-  const levelProgress = getLevelProgress(profile.xp, profile.level);
+  const nextReward = getNextReward(profile.xp);
+  const progress = getRewardProgress(profile.xp);
 
   // use safe defaults in case any of these fields are missing
   const totalWorkouts = profile.totalWorkouts ?? 0;
@@ -23,18 +23,17 @@ export const StatsDisplay: React.FC<StatsDisplayProps> = ({ profile }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Profile Stats</Text>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>Level {profile.level}</Text>
-        </View>
       </View>
 
       <View style={styles.experienceSection}>
         <View style={styles.experienceHeader}>
-          <Text style={styles.experienceText}>XP: {profile.xp}</Text>
-          <Text style={styles.nextLevelText}>{xpToNextLevel} to next level</Text>
+          <Text style={styles.experienceText}>Total XP: {profile.xp}</Text>
+          {nextReward && (
+            <Text style={styles.nextRewardText}>Next: {nextReward.name}</Text>
+          )}
         </View>
         <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${levelProgress * 100}%` }]} />
+          <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
         </View>
       </View>
 
