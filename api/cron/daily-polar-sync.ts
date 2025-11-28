@@ -287,6 +287,14 @@ async function insertDataToFirebase(userId: string, date: string, data: any) {
       syncedAt 
     });
     itemsQueued++;
+
+    // Check for device_id and update user document
+    // We use the last exercise in the list as it's likely the most recent one processed
+    const exerciseWithDevice = exercisesForDate.find((ex: any) => ex.device_id);
+    if (exerciseWithDevice) {
+      const userRef = db.collection('users').doc(userId);
+      batch.set(userRef, { deviceId: exerciseWithDevice.device_id }, { merge: true });
+    }
   }
 
   // Create summary document
