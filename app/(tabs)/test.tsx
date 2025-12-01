@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { ScrollView, Pressable, ActivityIndicator, Alert, TextInput, View as RNView } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
 import workoutCompletionService from '@/src/services/workoutCompletionService';
 import creatureService from '@/src/services/creatureService';
@@ -11,7 +9,6 @@ import { Creature } from '@/src/types/polar';
 import { StyleSheet } from 'react-native';
 
 export default function TestScreen() {
-  const colorScheme = useColorScheme();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [unlockedCreatures, setUnlockedCreatures] = useState<Creature[]>([]);
@@ -272,7 +269,7 @@ export default function TestScreen() {
               <View style={styles.creatureList}>
                 {lastResult.unlockedCreatures.map((creature: Creature, index: number) => (
                   <Text key={index} style={styles.creatureName}>
-                    • {creature.name} ({creature.type})
+                    • {creature.name} ({creature.rarity})
                   </Text>
                 ))}
               </View>

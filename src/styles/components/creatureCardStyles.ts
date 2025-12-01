@@ -1,4 +1,27 @@
 import { StyleSheet } from 'react-native';
+import { Creature } from '@/src/types/polar';
+
+export const getRarityColor = (type: Creature['rarity']) => {
+  switch (type) {
+  case 'rare': return '#43C073';
+  case 'epic': return '#8B5CF6';
+  case 'legendary': return '#F59E0B';
+  default: return '#3BA8F6';
+  }
+};
+
+export const getSportColor = (type: Creature['sport']) => {
+  switch (type) {
+    case 'RUNNING': return ['#AE0000', '#FFFFFF'];
+    case 'SWIMMING': return ['#53E8f6', '#1F2937'];
+    case 'HIKING': return ['#13780E', '#FFFFFF'];
+    case 'FITNESS': return ['#FB008A', '#FFFFFF'];
+    case 'CYCLING': return ['#FFF42A', '#1F2937'];
+    case 'CIRCUIT': return ['#BB00FF', '#FFFFFF'];
+    default: return ['#676767', '#FFFFFF'];
+  }
+};
+
 
 export const creatureCardStyles = StyleSheet.create({
   container: {
@@ -19,17 +42,31 @@ export const creatureCardStyles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
+    alignItems: 'flex-start',
   },
   name: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
+    alignSelf: 'center',
+  },
+  id: {
+    fontSize: 12,
+    color: '#6B7280',
+    alignSelf: 'center',
+    fontWeight: 'normal',
   },
   rarity: {
     fontSize: 12,
     fontWeight: '600',
+    alignSelf: 'center',
+  },
+  sportBadge: {
+    fontSize: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   stats: {
     flexDirection: 'row',
@@ -50,10 +87,15 @@ export const creatureCardStyles = StyleSheet.create({
     color: '#1F2937',
   },
   capturedBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
+    marginLeft: 8,
     backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  lockedBadge: {
+    marginLeft: 8,
+    backgroundColor: '#EF4444',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -63,10 +105,17 @@ export const creatureCardStyles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
   },
-  requirements: {
+  border: {
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     paddingTop: 12,
+    width: '100%',
+  },
+  desc: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontStyle: 'italic',
+    marginBottom: 4,
   },
   requirementsTitle: {
     fontSize: 14,
@@ -78,5 +127,65 @@ export const creatureCardStyles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 4,
+  },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
+    alignItems: "stretch",
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 8,
+    margin: 8,
+    borderWidth: 2,
+    shadowColor: '#1F2937',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  closeButton: {
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    marginBottom: -8,
+    marginTop: 8,
+    borderRadius: 24,
+  },
+  closeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 3,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
   },
 });

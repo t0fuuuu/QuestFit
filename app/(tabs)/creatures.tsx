@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, FlatList } from 'react-native';
+import { ScrollView } from 'react-native';
 import { Text, View } from '@/components/Themed';
-import { CreatureCard } from '@/components/game/CreatureCard';
+import { CreatureDetailsModal, CreatureCardGrid } from '@/components/game/CreatureCard';
 import { twoStyles as styles } from '@/src/styles';
 import creatureService from '@/src/services/creatureService';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
@@ -14,49 +14,59 @@ export default function CreaturesScreen() {
   const [allCreatures, setAllCreatures] = useState<Creature[]>([]);
 
   const capturedCreatureIds = profile?.capturedCreatures || [];
+
+  const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [selectedCreature, setSelectedCreature] = useState(creatureService.getAllCreatures()[0]);
+  const [selectedCaptured, setSelectedCaptured] = useState(false);
   
   useEffect(() => {
-    // load only locked/uncaptured creatures
-    const locked = creatureService.getLockedCreatures(capturedCreatureIds);
-    setAllCreatures(locked);
+    // load all creatures by ID
+    const creatures = creatureService.getAllCreatures();
+    setAllCreatures(creatures);
   }, [capturedCreatureIds.length]);
 
-  const lockedCreatures = allCreatures;
-
-  const renderCreature = ({ item }: { item: Creature }) => (
-    <CreatureCard
-      creature={item}
-      captured={false} // all shown here are locked
-      onPress={() => {
-        // handle creature selection zzzzzzzzzzzzzzzzzzzzzzzzzz sleeeeep
-        console.log('Selected creature:', item.name);
-        const lore = creatureService.getCreatureLore(item.id);
-        if (lore) {
-          console.log('Lore:', lore);
-        }
-      }}
-    />
-  );
+  const cards = creatureService.getAllCreatures().map(creature => ({
+    creature: creature,
+    captured: capturedCreatureIds.includes(creature.id)
+  }))
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Locked Creatures</Text>
+        <Text style={styles.title}>Creatures</Text>
         <Text style={styles.subtitle}>
-          Complete workout challenges to unlock these creatures!
+          View your captured creatures here. Complete workout challenges to unlock even more creatures!
         </Text>
         <Text style={styles.stats}>
-          {capturedCreatureIds.length} captured, {lockedCreatures.length} remaining
+          {capturedCreatureIds.length} captured, {allCreatures.length-capturedCreatureIds.length} remaining
         </Text>
       </View>
+      <ScrollView 
+      showsVerticalScrollIndicator={false} // Hide vertical scrollbar
+      showsHorizontalScrollIndicator={false} // Hide horizontal scrollbar
+      >
       
-      <FlatList
-        data={lockedCreatures}
-        renderItem={renderCreature}
-        keyExtractor={(item) => item.id}
-        numColumns={1}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
+      {/* Creature Card Grid */}
+      <CreatureCardGrid
+      cards={cards}
+      onPress={(id) => {
+        // handle creature selection
+        const card = cards[id-1];
+        setSelectedCreature(card.creature);
+        setSelectedCaptured(card.captured);
+        setShowUnlockModal(true);
+      }}
+      />
+      </ScrollView>
+
+      {/* Creature Details Modal */}
+      <CreatureDetailsModal
+        visible={showUnlockModal}
+        creature={selectedCreature}
+        captured={selectedCaptured}
+        onClose={() => {
+          setShowUnlockModal(false);
+        }}
       />
     </View>
   );
