@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  TextInput,
   ScrollView,
   Pressable,
   ActivityIndicator,
@@ -674,21 +673,29 @@ export default function InstructorDashboard() {
   const { isInstructor, loading: instructorLoading } = useInstructor(user?.uid);
   const { selectedUserIds, loading: studentsLoading, toggleUser } = useInstructorStudents(user?.uid);
   
-  const [searchQuery, setSearchQuery] = useState('');
-  const [allUsers, setAllUsers] = useState<{id: string, displayName: string, lastSync?: string}[]>([]);
-  const [userOverviews, setUserOverviews] = useState<Map<string, UserOverview>>(new Map());
-  const [loadingOverviews, setLoadingOverviews] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [sleepScoreData, setSleepScoreData] = useState<Map<string, Array<{date: string, score: number | null}>>>(new Map());
   const [sleepDates, setSleepDates] = useState<string[]>([]);
   const [loadingSleepData, setLoadingSleepData] = useState(false);
 
+  const {
+    allUsers,
+    userOverviews,
+    loadingOverviews,
+    sleepScoreData,
+    sleepDates,
+    loadingSleepData,
+    loadAllUsers,
+    loadUserOverviews,
+    loadSleepScoreData,
+  } = useDashboardData(selectedUserIds);
+
   useEffect(() => {
     if (isInstructor) {
       loadAllUsers();
     }
-  }, [isInstructor]);
+  }, [isInstructor, loadAllUsers]);
 
   useEffect(() => {
     if (selectedUserIds.length > 0) {
@@ -913,11 +920,6 @@ export default function InstructorDashboard() {
     setRefreshing(false);
   };
 
-  const filteredUsers = allUsers.filter(user =>
-    user.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.displayName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   if (instructorLoading || studentsLoading) {
     return (
       <View style={styles.container}>
@@ -940,46 +942,12 @@ export default function InstructorDashboard() {
 
   if (showUserSelection) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Select Users to Monitor</Text>
-          <Pressable
-            style={styles.doneButton}
-            onPress={() => setShowUserSelection(false)}
-          >
-            <Text style={styles.doneButtonText}>Done</Text>
-          </Pressable>
-        </View>
-
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search user ID..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
-        />
-
-        <ScrollView style={styles.userList}>
-          {filteredUsers.map(user => (
-            <Pressable
-              key={user.id}
-              style={[
-                styles.userItem,
-                selectedUserIds.includes(user.id) && styles.userItemSelected,
-              ]}
-              onPress={() => toggleUser(user.id)}
-            >
-              <View>
-                <Text style={styles.userNameText}>{user.displayName}</Text>
-                <Text style={styles.userIdSubText}>{user.id}</Text>
-              </View>
-              {selectedUserIds.includes(user.id) && (
-                <Text style={styles.checkmark}>✓</Text>
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
-      </View>
+      <UserSelectionView
+        allUsers={allUsers}
+        selectedUserIds={selectedUserIds}
+        onToggleUser={toggleUser}
+        onDone={() => setShowUserSelection(false)}
+      />
     );
   }
 

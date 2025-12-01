@@ -172,6 +172,13 @@ class BluetoothService {
    */
   async connectToDevice(device: Device): Promise<void> {
     try {
+      // Stop scanning before connecting to avoid issues on Android
+      const manager = this.getManager();
+      manager.stopDeviceScan();
+      
+      // Small delay to ensure scan is stopped completely
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Check if already connected
       if (this.connectedDevices.has(device.id)) {
         console.log('Device already connected:', device.name);
@@ -180,7 +187,7 @@ class BluetoothService {
 
       console.log('Connecting to device:', device.name);
       
-      const connected = await device.connect();
+      const connected = await device.connect({ autoConnect: false });
       console.log('Connected! Discovering services...');
       
       await connected.discoverAllServicesAndCharacteristics();
