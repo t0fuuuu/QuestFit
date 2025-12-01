@@ -32,8 +32,15 @@ export default function XPManagementScreen() {
   const [totalDuration, setTotalDuration] = useState<number>(0);
   const [totalAvgHeartRate, setTotalAvgHeartRate] = useState<number>(0);
   const [weight, setWeight] = useState<number | null>(null);
+  const [height, setHeight] = useState<number | null>(null);
   const [age, setAge] = useState<number | null>(null);
   const [gender, setGender] = useState<string | null>(null);
+  const [maxHr, setMaxHr] = useState<number | null>(null);
+  const [restingHr, setRestingHr] = useState<number | null>(null);
+  const [aerobicThreshold, setAerobicThreshold] = useState<number | null>(null);
+  const [anaerobicThreshold, setAnaerobicThreshold] = useState<number | null>(null);
+  const [vo2Max, setVo2Max] = useState<number | null>(null);
+  const [lastPhysicalSync, setLastPhysicalSync] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [xpAmount, setXpAmount] = useState('');
@@ -76,8 +83,15 @@ export default function XPManagementScreen() {
           setTotalDuration(data.totalDuration || 0);
           setTotalAvgHeartRate(data.totalAvgHeartRate || 0);
           setWeight(data.weight || null);
+          setHeight(data.height || null);
           setAge(data.age || null);
           setGender(data.gender || null);
+          setMaxHr(data['maximum-hr'] || null);
+          setRestingHr(data['resting-hr'] || null);
+          setAerobicThreshold(data['aerobic-threshold'] || null);
+          setAnaerobicThreshold(data['anaerobic-threshold'] || null);
+          setVo2Max(data['vo2-max'] || null);
+          setLastPhysicalSync(data.lastPhysicalSync || null);
           
           // grab the full creature data from just the IDs we have stored
           const creatureIds = data.capturedCreatures || [];
@@ -282,14 +296,27 @@ export default function XPManagementScreen() {
         )}
 
         {/* Physical Attributes Display */}
-        {(weight !== null || age !== null || gender !== null) && (
+        {(weight !== null || age !== null || gender !== null || height !== null || maxHr !== null || vo2Max !== null) && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Physical Attributes</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={styles.sectionTitle}>Physical Attributes</Text>
+              {lastPhysicalSync && (
+                <Text style={{ color: '#6B7280', fontSize: 12 }}>
+                  Synced: {new Date(lastPhysicalSync).toLocaleDateString()}
+                </Text>
+              )}
+            </View>
             <View style={styles.attributesContainer}>
               {weight !== null && (
                 <View style={styles.attributeBox}>
                   <Text style={styles.attributeLabel}>Weight</Text>
                   <Text style={styles.attributeValue}>{weight} kg</Text>
+                </View>
+              )}
+              {height !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Height</Text>
+                  <Text style={styles.attributeValue}>{height} cm</Text>
                 </View>
               )}
               {age !== null && (
@@ -302,6 +329,36 @@ export default function XPManagementScreen() {
                 <View style={styles.attributeBox}>
                   <Text style={styles.attributeLabel}>Gender</Text>
                   <Text style={styles.attributeValue}>{gender === 'MALE' ? 'Male' : gender === 'FEMALE' ? 'Female' : gender}</Text>
+                </View>
+              )}
+              {vo2Max !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>VO2 Max</Text>
+                  <Text style={styles.attributeValue}>{vo2Max}</Text>
+                </View>
+              )}
+              {maxHr !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Max HR</Text>
+                  <Text style={styles.attributeValue}>{maxHr} bpm</Text>
+                </View>
+              )}
+              {restingHr !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Resting HR</Text>
+                  <Text style={styles.attributeValue}>{restingHr} bpm</Text>
+                </View>
+              )}
+              {aerobicThreshold !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Aerobic T.</Text>
+                  <Text style={styles.attributeValue}>{aerobicThreshold} bpm</Text>
+                </View>
+              )}
+              {anaerobicThreshold !== null && (
+                <View style={styles.attributeBox}>
+                  <Text style={styles.attributeLabel}>Anaerobic T.</Text>
+                  <Text style={styles.attributeValue}>{anaerobicThreshold} bpm</Text>
                 </View>
               )}
             </View>
@@ -492,7 +549,7 @@ export default function XPManagementScreen() {
         </View>
 
         {/* Polar Disconnect Button and Show Consent Button */}
-        {(weight !== null || age !== null || gender !== null) && (
+        {(weight !== null || age !== null || gender !== null || height !== null) && (
           <View style={styles.section}>
             <Pressable
               style={styles.showConsentButton}

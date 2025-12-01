@@ -12,12 +12,12 @@ import { useInstructor } from '@/src/hooks/useInstructor';
 import { useInstructorStudents } from '@/src/hooks/useInstructorStudents';
 import { instructorDashboardStyles as styles } from '@/src/styles/screens/instructorDashboardStyles';
 
-import { useDashboardData } from './_instr-dashboard/hooks/useDashboardData';
-import { SleepScoreLineChart } from './_instr-dashboard/components/SleepScoreLineChart';
-import { DailyStepsBarChart } from './_instr-dashboard/components/DailyStepsBarChart';
-import { MonthlyExercisesBarChart } from './_instr-dashboard/components/MonthlyExercisesBarChart';
-import { UserSelectionView } from './_instr-dashboard/components/UserSelectionView';
-import { UserCard } from './_instr-dashboard/components/UserCard';
+import { useDashboardData } from '@/components/instr-dashboard/hooks/useDashboardData';
+import { SleepScoreLineChart } from '@/components/instr-dashboard/components/SleepScoreLineChart';
+import { DailyStepsBarChart } from '@/components/instr-dashboard/components/DailyStepsBarChart';
+import { MonthlyExercisesBarChart } from '@/components/instr-dashboard/components/MonthlyExercisesBarChart';
+import { UserSelectionView } from '@/components/instr-dashboard/components/UserSelectionView';
+import { UserCard } from '@/components/instr-dashboard/components/UserCard';
 
 export default function InstructorDashboard() {
   const { user } = useAuth();
@@ -168,7 +168,8 @@ export default function InstructorDashboard() {
           )}
 
           {/* Existing user cards container */}
-          <View style={styles.overviewsContainer}>
+
+          {/* <View style={styles.overviewsContainer}>
             {selectedUserIds.map(userId => {
               const overview = userOverviews.get(userId);
               const user = allUsers.find(u => u.id === userId);
@@ -183,7 +184,8 @@ export default function InstructorDashboard() {
                 />
               );
             })}
-          </View>
+          </View> */}
+          
         </View>
       )}
     </ScrollView>
