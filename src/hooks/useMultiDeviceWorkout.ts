@@ -193,6 +193,9 @@ export const useMultiDeviceWorkout = () => {
 
   const connectToDevice = useCallback(async (device: Device) => {
     try {
+      // Ensure scanning UI is updated since we force stop scan in service
+      setIsScanning(false);
+      
       setError(null);
       console.log('🔗 Attempting to connect to:', device.name, '(', device.id, ')');
       

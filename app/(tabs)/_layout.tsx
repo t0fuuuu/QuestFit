@@ -126,9 +126,9 @@ export default function TabLayout() {
     try {
       await polarOAuthService.disconnectPolarAccount(user.uid);
       setHasPolarToken(false);
-      console.log('✅ Polar account disconnected');
+      console.log('Polar account disconnected');
     } catch (error) {
-      console.error('❌ Error disconnecting Polar:', error);
+      console.error('Error disconnecting Polar:', error);
     }
   };
 
