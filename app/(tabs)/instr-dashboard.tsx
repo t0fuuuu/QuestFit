@@ -319,7 +319,7 @@ export default function InstructorDashboard() {
           )}
 
           {/* Daily Steps Vertical Bar Chart */}
-          <DailyStepsBarChart chartData={stepsChartData} />
+          <DailyStepsBarChart chartData={stepsChartData} date={selectedDate} />
 
           {/* Monthly Exercise Bar Chart */}
           <MonthlyExercisesBarChart chartData={chartData} />

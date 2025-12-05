@@ -4,9 +4,10 @@ import { Text } from '@/components/Themed';
 
 interface DailyStepsBarChartProps {
   chartData: { name: string; steps: number }[];
+  date?: Date;
 }
 
-export const DailyStepsBarChart = ({ chartData }: DailyStepsBarChartProps) => {
+export const DailyStepsBarChart = ({ chartData, date }: DailyStepsBarChartProps) => {
   const maxSteps = Math.max(...chartData.map(d => d.steps), 1);
   const axisMax = maxSteps + 400;
   const yAxisSteps = 5;
@@ -14,10 +15,21 @@ export const DailyStepsBarChart = ({ chartData }: DailyStepsBarChartProps) => {
     Math.round((axisMax / yAxisSteps) * i)
   );
   
+  const isToday = (d: Date) => {
+    const today = new Date();
+    return d.getDate() === today.getDate() &&
+      d.getMonth() === today.getMonth() &&
+      d.getFullYear() === today.getFullYear();
+  };
+
+  const title = (date && !isToday(date))
+    ? `Steps by User - ${date.toLocaleDateString()}`
+    : "Today's Steps by User";
+
   return (
     <View style={{ padding: 16, backgroundColor: 'white', marginBottom: 20, borderRadius: 8 }}>
       <Text style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center', marginBottom: 16, color: '#000' }}>
-        Today's Steps by User
+        {title}
       </Text>
       <View style={{ flexDirection: 'row' }}>
         {/* Y-axis */}

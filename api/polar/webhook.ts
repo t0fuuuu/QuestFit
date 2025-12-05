@@ -1,6 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 import axios from 'axios';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin
