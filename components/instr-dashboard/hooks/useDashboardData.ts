@@ -3,7 +3,7 @@ import { collection, getDocs, doc, getDoc, query, where, limit, orderBy } from '
 import { db } from '@/src/services/firebase';
 import { User, UserOverview } from '../types';
 
-export function useDashboardData(selectedUserIds: string[]) {
+export function useDashboardData(selectedUserIds: string[], selectedDate: Date = new Date()) {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [userOverviews, setUserOverviews] = useState<Map<string, UserOverview>>(new Map());
   const [loadingOverviews, setLoadingOverviews] = useState(false);
@@ -31,7 +31,7 @@ export function useDashboardData(selectedUserIds: string[]) {
 
   const loadUserOverviews = useCallback(async (usersList?: User[]) => {
     setLoadingOverviews(true);
-    const today = new Date().toISOString().split('T')[0];
+    const dateStr = selectedDate.toISOString().split('T')[0];
     const overviews = new Map<string, UserOverview>();
     const sourceUsers = usersList || allUsers;
 
@@ -62,7 +62,7 @@ export function useDashboardData(selectedUserIds: string[]) {
 
         // Get activity
         const activityDoc = await getDoc(
-          doc(db, `users/${userId}/polarData/activities/all/${today}`)
+          doc(db, `users/${userId}/polarData/activities/all/${dateStr}`)
         );
         if (activityDoc.exists()) {
           const data = activityDoc.data();
@@ -75,7 +75,7 @@ export function useDashboardData(selectedUserIds: string[]) {
 
         // Get cardio load
         const cardioDoc = await getDoc(
-          doc(db, `users/${userId}/polarData/cardioLoad/all/${today}`)
+          doc(db, `users/${userId}/polarData/cardioLoad/all/${dateStr}`)
         );
         if (cardioDoc.exists()) {
           overview.todayCardioLoad = cardioDoc.data()?.data?.cardio_load_ratio;
@@ -83,7 +83,7 @@ export function useDashboardData(selectedUserIds: string[]) {
 
         // Get sleep
         const sleepDoc = await getDoc(
-          doc(db, `users/${userId}/polarData/sleep/all/${today}`)
+          doc(db, `users/${userId}/polarData/sleep/all/${dateStr}`)
         );
         if (sleepDoc.exists()) {
           const data = sleepDoc.data();
@@ -140,9 +140,8 @@ export function useDashboardData(selectedUserIds: string[]) {
         }
 
         // Get exercises
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = now.getMonth(); // 0-indexed
+        const year = selectedDate.getFullYear();
+        const month = selectedDate.getMonth(); // 0-indexed
 
         const monthStart = new Date(year, month, 1).toISOString().split('T')[0];
         const monthEnd = new Date(year, month + 1, 0).toISOString().split('T')[0];
@@ -173,16 +172,16 @@ export function useDashboardData(selectedUserIds: string[]) {
 
     setUserOverviews(overviews);
     setLoadingOverviews(false);
-  }, [selectedUserIds, allUsers]);
+  }, [selectedUserIds, allUsers, selectedDate]);
 
   const loadSleepScoreData = useCallback(async () => {
     setLoadingSleepData(true);
     const sleepData: Map<string, Array<{date: string, score: number | null}>> = new Map();
     const dates: string[] = [];
     
-    // Get last 7 days
+    // Get last 7 days ending on selectedDate
     for (let i = 6; i >= 0; i--) {
-      const date = new Date();
+      const date = new Date(selectedDate);
       date.setDate(date.getDate() - i);
       dates.push(date.toISOString().split('T')[0]);
     }
@@ -215,7 +214,7 @@ export function useDashboardData(selectedUserIds: string[]) {
     setLoadingSleepData(false);
     
     return { sleepData, dates };
-  }, [selectedUserIds]);
+  }, [selectedUserIds, selectedDate]);
 
   return {
     allUsers,

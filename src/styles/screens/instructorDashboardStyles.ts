@@ -29,6 +29,16 @@ export const instructorDashboardStyles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
   },
+  webDatePickerContainer: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+    minWidth: 120,
+  },
   selectButtonText: {
     color: '#FFFFFF',
     fontWeight: '600',

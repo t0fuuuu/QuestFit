@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createElement } from 'react';
 import {
   View,
   ScrollView,
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text } from '@/components/Themed';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useInstructor } from '@/src/hooks/useInstructor';
@@ -28,6 +30,8 @@ export default function InstructorDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [showUserSelection, setShowUserSelection] = useState(false);
   const [filteredUserId, setFilteredUserId] = useState<string>('all'); // 'all' = show all users
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const {
     allUsers,
@@ -39,7 +43,7 @@ export default function InstructorDashboard() {
     loadAllUsers,
     loadUserOverviews,
     loadSleepScoreData,
-  } = useDashboardData(selectedUserIds);
+  } = useDashboardData(selectedUserIds, selectedDate);
 
   useEffect(() => {
     if (isInstructor) {
@@ -54,7 +58,7 @@ export default function InstructorDashboard() {
     }
     // Reset filter when selected users change
     setFilteredUserId('all');
-  }, [selectedUserIds, loadUserOverviews, loadSleepScoreData]);
+  }, [selectedUserIds, loadUserOverviews, loadSleepScoreData, selectedDate]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -62,6 +66,15 @@ export default function InstructorDashboard() {
     await loadUserOverviews(users);
     await loadSleepScoreData();
     setRefreshing(false);
+  };
+
+  const onChangeDate = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      setSelectedDate(date);
+    }
   };
 
   // ============================================================
@@ -184,15 +197,75 @@ export default function InstructorDashboard() {
     >
       <View style={styles.header}>
         <Text style={styles.title}>Instructor Dashboard</Text>
-        <Pressable
-          style={styles.selectButton}
-          onPress={() => setShowUserSelection(true)}
-        >
-          <Text style={styles.selectButtonText}>
-            {selectedUserIds.length > 0 ? 'Edit Users' : 'Select Users'}
-          </Text>
-        </Pressable>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {Platform.OS === 'web' ? (
+            <View style={[styles.webDatePickerContainer, { cursor: 'pointer' } as any]}>
+              <Text style={[styles.selectButtonText, { color: '#333' }]}>
+                {String(selectedDate.getDate()).padStart(2, '0')}/{String(selectedDate.getMonth() + 1).padStart(2, '0')}/{selectedDate.getFullYear()}
+              </Text>
+              {/* @ts-ignore: Web-only input */}
+              {createElement('input', {
+                type: 'date',
+                value: selectedDate.getFullYear() + '-' + String(selectedDate.getMonth() + 1).padStart(2, '0') + '-' + String(selectedDate.getDate()).padStart(2, '0'),
+                onChange: (e: any) => {
+                  if (e.target.value) {
+                    const [year, month, day] = e.target.value.split('-').map(Number);
+                    const date = new Date(year, month - 1, day);
+                    onChangeDate(null, date);
+                  }
+                },
+                onClick: (e: any) => {
+                  try {
+                    if (e.target.showPicker) {
+                      e.target.showPicker();
+                    }
+                  } catch (err) {
+                    // ignore
+                  }
+                },
+                style: {
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  opacity: 0,
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  border: 'none'
+                }
+              })}
+            </View>
+          ) : (
+            <Pressable
+              style={[styles.selectButton, { backgroundColor: '#f0f0f0' }]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <Text style={[styles.selectButtonText, { color: '#333' }]}>
+                {selectedDate.toLocaleDateString()}
+              </Text>
+            </Pressable>
+          )}
+          <Pressable
+            style={styles.selectButton}
+            onPress={() => setShowUserSelection(true)}
+          >
+            <Text style={styles.selectButtonText}>
+              {selectedUserIds.length > 0 ? 'Edit Users' : 'Select Users'}
+            </Text>
+          </Pressable>
+        </View>
       </View>
+
+      {Platform.OS !== 'web' && showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          onChange={onChangeDate}
+          maximumDate={new Date()}
+        />
+      )}
 
       {selectedUserIds.length === 0 ? (
         <View style={styles.emptyState}>
