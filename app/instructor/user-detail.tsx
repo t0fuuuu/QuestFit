@@ -7,7 +7,9 @@ import {
   RefreshControl,
   Pressable,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router } from 'expo-router';
 import { db } from '@/src/services/firebase';
@@ -49,68 +51,157 @@ interface UserStats {
   };
 }
 
+interface AISummary {
+  insights: string;
+  recommendations: string;
+  "[short]insights": string;
+  "[short]recommendations": string;
+}
+
 export default function UserDetailScreen() {
-  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const { userId, date } = useLocalSearchParams<{ userId: string, date?: string }>();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{time: string, hr: number} | null>(null);
+  const [selectedDate, setSelectedDate] = useState(date ? new Date(date) : new Date());
+  
+  // AI State
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
 
   useEffect(() => {
     if (userId) {
       loadUserStats();
+      checkExistingAISummary();
     }
-  }, [userId]);
+  }, [userId, selectedDate]);
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const checkExistingAISummary = async () => {
+    if (!userId) return;
+    try {
+      const dateStr = formatDate(selectedDate);
+      const summaryDoc = await getDoc(doc(db, `users/${userId}/openAIGen/${dateStr}`));
+      if (summaryDoc.exists()) {
+        setAiSummary(summaryDoc.data() as AISummary);
+      } else {
+        setAiSummary(null);
+      }
+    } catch (error) {
+      console.log("No existing summary found");
+      setAiSummary(null);
+    }
+  };
+
+  const generateInsights = async () => {
+    if (!userId) return;
+    setLoadingAI(true);
+    try {
+      let apiUrl = '/api/openai/generate-summary';
+      if (Platform.OS !== 'web') {
+        const hostUri = Constants.expoConfig?.hostUri;
+        if (hostUri) {
+          apiUrl = `http://${hostUri}/api/openai/generate-summary`;
+        }
+      }
+
+      const dateStr = formatDate(selectedDate);
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          date: dateStr,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to generate insights';
+        throw new Error(errorMessage);
+      }
+
+      const data = await response.json();
+      setAiSummary(data);
+    } catch (error: any) {
+      console.error('Error generating insights:', error);
+      alert(error.message || 'Failed to generate insights. Please try again.');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  const changeDate = (days: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + days);
+    setSelectedDate(newDate);
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
+  };
 
   const loadUserStats = async () => {
     if (!userId) return;
     
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
       const userStats: UserStats = {
         today: {},
         historical: {},
       };
 
-      // Get today's data
+      const dateStr = formatDate(selectedDate);
+
+      // Get selected date's data
       const todayActivity = await getDoc(
-        doc(db, `users/${userId}/polarData/activities/all/${today}`)
+        doc(db, `users/${userId}/polarData/activities/all/${dateStr}`)
       );
       if (todayActivity.exists()) {
         userStats.today.activity = todayActivity.data();
       }
 
       const todayCardio = await getDoc(
-        doc(db, `users/${userId}/polarData/cardioLoad/all/${today}`)
+        doc(db, `users/${userId}/polarData/cardioLoad/all/${dateStr}`)
       );
       if (todayCardio.exists()) {
         userStats.today.cardioLoad = todayCardio.data();
       }
 
       const todaySleep = await getDoc(
-        doc(db, `users/${userId}/polarData/sleep/all/${today}`)
+        doc(db, `users/${userId}/polarData/sleep/all/${dateStr}`)
       );
       if (todaySleep.exists()) {
         userStats.today.sleep = todaySleep.data();
       }
 
       const todayRecharge = await getDoc(
-        doc(db, `users/${userId}/polarData/nightlyRecharge/all/${today}`)
+        doc(db, `users/${userId}/polarData/nightlyRecharge/all/${dateStr}`)
       );
       if (todayRecharge.exists()) {
         userStats.today.nightlyRecharge = todayRecharge.data();
       }
 
       const todayExercises = await getDoc(
-        doc(db, `users/${userId}/polarData/exercises/all/${today}`)
+        doc(db, `users/${userId}/polarData/exercises/all/${dateStr}`)
       );
       if (todayExercises.exists()) {
         userStats.today.exercises = todayExercises.data();
       }
 
       const todayHR = await getDoc(
-        doc(db, `users/${userId}/polarData/continuousHeartRate/all/${today}`)
+        doc(db, `users/${userId}/polarData/continuousHeartRate/all/${dateStr}`)
       );
       if (todayHR.exists()) {
         userStats.today.continuousHR = todayHR.data();
@@ -202,18 +293,71 @@ export default function UserDetailScreen() {
         <Text style={styles.headerTitle}>{userId}</Text>
       </View>
 
+      <View style={styles.dateSelector}>
+        <TouchableOpacity onPress={() => changeDate(-1)} style={styles.dateButton}>
+          <Text style={styles.dateButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.dateText}>
+          {selectedDate.toLocaleDateString(undefined, { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          })}
+        </Text>
+        <TouchableOpacity 
+          onPress={() => changeDate(1)} 
+          style={[styles.dateButton, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabled]}
+          disabled={isSameDay(selectedDate, new Date())}
+        >
+          <Text style={[styles.dateButtonText, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabledText]}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* AI Insights Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Daily Insights & Recommendations</Text>
+          
+          {aiSummary ? (
+            <View style={styles.card}>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={[styles.cardSubtitle, { color: '#2E7D32' }]}>Insights</Text>
+                <Text style={styles.infoText}>{aiSummary.insights}</Text>
+              </View>
+              <View>
+                <Text style={[styles.cardSubtitle, { color: '#1565C0' }]}>Recommendations</Text>
+                <Text style={styles.infoText}>{aiSummary.recommendations}</Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.button, loadingAI && styles.buttonDisabled]} 
+              onPress={generateInsights}
+              disabled={loadingAI}
+            >
+              {loadingAI ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Get Insights & Recommendations</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Activity Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Activity</Text>
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
-              <Text style={styles.columnLabel}>Today</Text>
+              <Text style={styles.columnLabel}>
+                {isSameDay(selectedDate, new Date()) ? 'Today' : 'Selected'}
+              </Text>
               {stats?.today.activity ? (
                 <>
                   <Text style={styles.statValue}>
@@ -256,7 +400,9 @@ export default function UserDetailScreen() {
           <Text style={styles.sectionTitle}>Cardio Load</Text>
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
-              <Text style={styles.columnLabel}>Today</Text>
+              <Text style={styles.columnLabel}>
+                {isSameDay(selectedDate, new Date()) ? 'Today' : 'Selected'}
+              </Text>
               {stats?.today.cardioLoad?.data?.cardio_load_ratio ? (
                 <>
                   <Text style={styles.statValue}>
@@ -291,7 +437,9 @@ export default function UserDetailScreen() {
           <View style={styles.card}>
             {stats?.today.sleep ? (
               <>
-                <Text style={styles.cardSubtitle}>Last Night</Text>
+                <Text style={styles.cardSubtitle}>
+                  {isSameDay(selectedDate, new Date()) ? 'Last Night' : 'Sleep Session'}
+                </Text>
                 <View style={styles.statsGrid}>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Duration</Text>
@@ -799,6 +947,55 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  button: {
+    backgroundColor: '#000000',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  dateButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: '#F5F5F5',
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  dateButtonDisabled: {
+    opacity: 0.3,
+  },
+  dateButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  dateButtonDisabledText: {
+    color: '#999999',
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
 });
 

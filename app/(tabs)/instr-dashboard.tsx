@@ -56,9 +56,14 @@ export default function InstructorDashboard() {
       loadUserOverviews();
       loadSleepScoreData();
     }
-    // Reset filter when selected users change
-    setFilteredUserId('all');
   }, [selectedUserIds, loadUserOverviews, loadSleepScoreData, selectedDate]);
+
+  // Reset filter if the selected user is no longer in the list of students
+  useEffect(() => {
+    if (filteredUserId !== 'all' && !selectedUserIds.includes(filteredUserId)) {
+      setFilteredUserId('all');
+    }
+  }, [selectedUserIds, filteredUserId]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -114,7 +119,13 @@ export default function InstructorDashboard() {
   // Navigate to user detail page
   const handleViewDetails = () => {
     if (isSingleUserSelected) {
-      router.push(`/instructor/user-detail?userId=${filteredUserId}`);
+      router.push({
+        pathname: '/instructor/user-detail',
+        params: { 
+          userId: filteredUserId,
+          date: selectedDate.toISOString()
+        }
+      });
     }
   };
 
