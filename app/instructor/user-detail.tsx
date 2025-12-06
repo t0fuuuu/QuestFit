@@ -7,7 +7,9 @@ import {
   RefreshControl,
   Pressable,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router } from 'expo-router';
 import { db } from '@/src/services/firebase';
@@ -49,18 +51,82 @@ interface UserStats {
   };
 }
 
+interface AISummary {
+  insights: string;
+  recommendations: string;
+  "[short]insights": string;
+  "[short]recommendations": string;
+}
+
 export default function UserDetailScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{time: string, hr: number} | null>(null);
+  
+  // AI State
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [loadingAI, setLoadingAI] = useState(false);
 
   useEffect(() => {
     if (userId) {
       loadUserStats();
+      checkExistingAISummary();
     }
   }, [userId]);
+
+  const checkExistingAISummary = async () => {
+    if (!userId) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const summaryDoc = await getDoc(doc(db, `users/${userId}/openAIGen/${today}`));
+      if (summaryDoc.exists()) {
+        setAiSummary(summaryDoc.data() as AISummary);
+      }
+    } catch (error) {
+      console.log("No existing summary found");
+    }
+  };
+
+  const generateInsights = async () => {
+    if (!userId) return;
+    setLoadingAI(true);
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      let apiUrl = '/api/openai/generate-summary';
+      if (Platform.OS !== 'web') {
+        const hostUri = Constants.expoConfig?.hostUri;
+        if (hostUri) {
+          apiUrl = `http://${hostUri}/api/openai/generate-summary`;
+        }
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          date: today,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate insights');
+      }
+
+      const data = await response.json();
+      setAiSummary(data);
+    } catch (error) {
+      console.error('Error generating insights:', error);
+      alert('Failed to generate insights. Please try again.');
+    } finally {
+      setLoadingAI(false);
+    }
+  };
 
   const loadUserStats = async () => {
     if (!userId) return;
@@ -208,6 +274,36 @@ export default function UserDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
       >
+        {/* AI Insights Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Daily Insights & Recommendations</Text>
+          
+          {aiSummary ? (
+            <View style={styles.card}>
+              <View style={{ marginBottom: 16 }}>
+                <Text style={[styles.cardSubtitle, { color: '#2E7D32' }]}>Insights</Text>
+                <Text style={styles.infoText}>{aiSummary.insights}</Text>
+              </View>
+              <View>
+                <Text style={[styles.cardSubtitle, { color: '#1565C0' }]}>Recommendations</Text>
+                <Text style={styles.infoText}>{aiSummary.recommendations}</Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.button, loadingAI && styles.buttonDisabled]} 
+              onPress={generateInsights}
+              disabled={loadingAI}
+            >
+              {loadingAI ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.buttonText}>Get Insights & Recommendations</Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
         {/* Activity Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Activity</Text>
@@ -798,6 +894,22 @@ const styles = StyleSheet.create({
   tooltipText: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  button: {
+    backgroundColor: '#000000',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

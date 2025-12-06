@@ -26,16 +26,14 @@ const openai = new OpenAI({
 const isVercel = process.env.VERCEL === '1';
 
 const runAnalysis = async () => {
-    // Reduced to 1 iteration for testing on Vercel to avoid timeouts
-    // Change this back to 20 if running locally or if you have a long timeout
-    const iterations = isVercel ? 1 : 20; 
+    const iterations = isVercel ? 1 : 5; 
 
     for (let i = 1; i <= iterations; i++) {
         console.log(`Running request: ${i}...`);
 
         try {
             const response = await openai.responses.create({
-                model: "gpt-4o-mini", // Updated to a valid model name (gpt-5-nano isn't standard public yet)
+                model: "gpt-5-nano",
                 input: [
                     {
                         role:"system",
@@ -60,8 +58,6 @@ const runAnalysis = async () => {
 
             if (isVercel) {
                 console.log(`[Result ${i}]:`, response.output_text);
-                // On Vercel, we can't write to persistent storage easily. 
-                // We could write to /tmp but it vanishes.
             } else {
                 const outputDir = './archive/summaries';
                 if (!fs.existsSync(outputDir)){
