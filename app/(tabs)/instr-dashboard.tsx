@@ -114,7 +114,13 @@ export default function InstructorDashboard() {
   // Navigate to user detail page
   const handleViewDetails = () => {
     if (isSingleUserSelected) {
-      router.push(`/instructor/user-detail?userId=${filteredUserId}`);
+      router.push({
+        pathname: '/instructor/user-detail',
+        params: { 
+          userId: filteredUserId,
+          date: selectedDate.toISOString()
+        }
+      });
     }
   };
 

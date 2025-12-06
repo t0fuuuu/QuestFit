@@ -59,11 +59,12 @@ interface AISummary {
 }
 
 export default function UserDetailScreen() {
-  const { userId } = useLocalSearchParams<{ userId: string }>();
+  const { userId, date } = useLocalSearchParams<{ userId: string, date?: string }>();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{time: string, hr: number} | null>(null);
+  const [selectedDate, setSelectedDate] = useState(date ? new Date(date) : new Date());
   
   // AI State
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
@@ -74,18 +75,28 @@ export default function UserDetailScreen() {
       loadUserStats();
       checkExistingAISummary();
     }
-  }, [userId]);
+  }, [userId, selectedDate]);
+
+  const formatDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const checkExistingAISummary = async () => {
     if (!userId) return;
-    const today = new Date().toISOString().split('T')[0];
     try {
-      const summaryDoc = await getDoc(doc(db, `users/${userId}/openAIGen/${today}`));
+      const dateStr = formatDate(selectedDate);
+      const summaryDoc = await getDoc(doc(db, `users/${userId}/openAIGen/${dateStr}`));
       if (summaryDoc.exists()) {
         setAiSummary(summaryDoc.data() as AISummary);
+      } else {
+        setAiSummary(null);
       }
     } catch (error) {
       console.log("No existing summary found");
+      setAiSummary(null);
     }
   };
 
@@ -93,8 +104,6 @@ export default function UserDetailScreen() {
     if (!userId) return;
     setLoadingAI(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
       let apiUrl = '/api/openai/generate-summary';
       if (Platform.OS !== 'web') {
         const hostUri = Constants.expoConfig?.hostUri;
@@ -103,6 +112,7 @@ export default function UserDetailScreen() {
         }
       }
 
+      const dateStr = formatDate(selectedDate);
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -110,22 +120,36 @@ export default function UserDetailScreen() {
         },
         body: JSON.stringify({
           userId,
-          date: today,
+          date: dateStr,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate insights');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || 'Failed to generate insights';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
       setAiSummary(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating insights:', error);
-      alert('Failed to generate insights. Please try again.');
+      alert(error.message || 'Failed to generate insights. Please try again.');
     } finally {
       setLoadingAI(false);
     }
+  };
+
+  const changeDate = (days: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + days);
+    setSelectedDate(newDate);
+  };
+
+  const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+      d1.getMonth() === d2.getMonth() &&
+      d1.getDate() === d2.getDate();
   };
 
   const loadUserStats = async () => {
@@ -133,50 +157,51 @@ export default function UserDetailScreen() {
     
     setLoading(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
       const userStats: UserStats = {
         today: {},
         historical: {},
       };
 
-      // Get today's data
+      const dateStr = formatDate(selectedDate);
+
+      // Get selected date's data
       const todayActivity = await getDoc(
-        doc(db, `users/${userId}/polarData/activities/all/${today}`)
+        doc(db, `users/${userId}/polarData/activities/all/${dateStr}`)
       );
       if (todayActivity.exists()) {
         userStats.today.activity = todayActivity.data();
       }
 
       const todayCardio = await getDoc(
-        doc(db, `users/${userId}/polarData/cardioLoad/all/${today}`)
+        doc(db, `users/${userId}/polarData/cardioLoad/all/${dateStr}`)
       );
       if (todayCardio.exists()) {
         userStats.today.cardioLoad = todayCardio.data();
       }
 
       const todaySleep = await getDoc(
-        doc(db, `users/${userId}/polarData/sleep/all/${today}`)
+        doc(db, `users/${userId}/polarData/sleep/all/${dateStr}`)
       );
       if (todaySleep.exists()) {
         userStats.today.sleep = todaySleep.data();
       }
 
       const todayRecharge = await getDoc(
-        doc(db, `users/${userId}/polarData/nightlyRecharge/all/${today}`)
+        doc(db, `users/${userId}/polarData/nightlyRecharge/all/${dateStr}`)
       );
       if (todayRecharge.exists()) {
         userStats.today.nightlyRecharge = todayRecharge.data();
       }
 
       const todayExercises = await getDoc(
-        doc(db, `users/${userId}/polarData/exercises/all/${today}`)
+        doc(db, `users/${userId}/polarData/exercises/all/${dateStr}`)
       );
       if (todayExercises.exists()) {
         userStats.today.exercises = todayExercises.data();
       }
 
       const todayHR = await getDoc(
-        doc(db, `users/${userId}/polarData/continuousHeartRate/all/${today}`)
+        doc(db, `users/${userId}/polarData/continuousHeartRate/all/${dateStr}`)
       );
       if (todayHR.exists()) {
         userStats.today.continuousHR = todayHR.data();
@@ -268,6 +293,27 @@ export default function UserDetailScreen() {
         <Text style={styles.headerTitle}>{userId}</Text>
       </View>
 
+      <View style={styles.dateSelector}>
+        <TouchableOpacity onPress={() => changeDate(-1)} style={styles.dateButton}>
+          <Text style={styles.dateButtonText}>←</Text>
+        </TouchableOpacity>
+        <Text style={styles.dateText}>
+          {selectedDate.toLocaleDateString(undefined, { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+          })}
+        </Text>
+        <TouchableOpacity 
+          onPress={() => changeDate(1)} 
+          style={[styles.dateButton, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabled]}
+          disabled={isSameDay(selectedDate, new Date())}
+        >
+          <Text style={[styles.dateButtonText, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabledText]}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -309,7 +355,9 @@ export default function UserDetailScreen() {
           <Text style={styles.sectionTitle}>Daily Activity</Text>
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
-              <Text style={styles.columnLabel}>Today</Text>
+              <Text style={styles.columnLabel}>
+                {isSameDay(selectedDate, new Date()) ? 'Today' : 'Selected'}
+              </Text>
               {stats?.today.activity ? (
                 <>
                   <Text style={styles.statValue}>
@@ -352,7 +400,9 @@ export default function UserDetailScreen() {
           <Text style={styles.sectionTitle}>Cardio Load</Text>
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
-              <Text style={styles.columnLabel}>Today</Text>
+              <Text style={styles.columnLabel}>
+                {isSameDay(selectedDate, new Date()) ? 'Today' : 'Selected'}
+              </Text>
               {stats?.today.cardioLoad?.data?.cardio_load_ratio ? (
                 <>
                   <Text style={styles.statValue}>
@@ -387,7 +437,9 @@ export default function UserDetailScreen() {
           <View style={styles.card}>
             {stats?.today.sleep ? (
               <>
-                <Text style={styles.cardSubtitle}>Last Night</Text>
+                <Text style={styles.cardSubtitle}>
+                  {isSameDay(selectedDate, new Date()) ? 'Last Night' : 'Sleep Session'}
+                </Text>
                 <View style={styles.statsGrid}>
                   <View style={styles.statItem}>
                     <Text style={styles.statLabel}>Duration</Text>
@@ -911,6 +963,39 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  dateButton: {
+    padding: 8,
+    borderRadius: 4,
+    backgroundColor: '#F5F5F5',
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  dateButtonDisabled: {
+    opacity: 0.3,
+  },
+  dateButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  dateButtonDisabledText: {
+    color: '#999999',
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
   },
 });
 
