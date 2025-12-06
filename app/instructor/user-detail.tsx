@@ -104,13 +104,8 @@ export default function UserDetailScreen() {
     if (!userId) return;
     setLoadingAI(true);
     try {
-      let apiUrl = '/api/openai/generate-summary';
-      if (Platform.OS !== 'web') {
-        const hostUri = Constants.expoConfig?.hostUri;
-        if (hostUri) {
-          apiUrl = `http://${hostUri}/api/openai/generate-summary`;
-        }
-      }
+      // Use Vercel production URL by default
+      const apiUrl = 'https://questfit-pi.vercel.app/api/openai/generate-summary';
 
       const dateStr = formatDate(selectedDate);
       const response = await fetch(apiUrl, {
