@@ -175,8 +175,8 @@ export async function POST(request: Request) {
           delete ex.heart_rate_zones;
           delete ex.speed_zones;
         });
-      } else if (cleanData.exercises.exercises && Array.isArray(cleanData.exercises.exercises)) {
-         cleanData.exercises.exercises.forEach((ex: any) => {
+      } else if ((cleanData.exercises as any).exercises && Array.isArray((cleanData.exercises as any).exercises)) {
+         (cleanData.exercises as any).exercises.forEach((ex: any) => {
           delete ex.samples;
           delete ex.heart_rate_zones;
           delete ex.speed_zones;
