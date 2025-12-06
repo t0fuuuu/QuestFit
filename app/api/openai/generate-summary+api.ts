@@ -104,7 +104,6 @@ export async function POST(request: Request) {
       `projects/${projectId}/databases/(default)/documents/users/${userId}/polarData/sleep/all/${date}`,
       `projects/${projectId}/databases/(default)/documents/users/${userId}/polarData/nightlyRecharge/all/${date}`,
       `projects/${projectId}/databases/(default)/documents/users/${userId}/polarData/exercises/all/${date}`,
-      `projects/${projectId}/databases/(default)/documents/users/${userId}/polarData/continuousHeartRate/all/${date}`,
     ];
 
     const batchResponse = await fetch(`https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents:batchGet`, {
@@ -131,7 +130,6 @@ export async function POST(request: Request) {
       sleep: null,
       nightlyRecharge: null,
       exercises: null,
-      continuousHeartRate: null
     };
 
     const pathToKey: any = {
@@ -140,7 +138,6 @@ export async function POST(request: Request) {
       [docPaths[2]]: 'sleep',
       [docPaths[3]]: 'nightlyRecharge',
       [docPaths[4]]: 'exercises',
-      [docPaths[5]]: 'continuousHeartRate',
     };
 
     if (Array.isArray(batchResults)) {
@@ -159,6 +156,33 @@ export async function POST(request: Request) {
     const cleanData = Object.fromEntries(
       Object.entries(dataMap).filter(([_, v]) => v != null)
     );
+
+    // Sanitize data to reduce token count
+    if (cleanData.sleep) {
+      // Remove high-frequency samples
+      delete (cleanData.sleep as any).heart_rate_samples;
+      delete (cleanData.sleep as any).hypnogram;
+    }
+
+    if (cleanData.exercises) {
+      // If exercises is an array or has a list of exercises, iterate and clean
+      // Depending on structure, it might be a single object or array. 
+      // Assuming it might be an array of exercises or an object with an array.
+      // Based on typical Polar data, it might be an array.
+      if (Array.isArray(cleanData.exercises)) {
+        cleanData.exercises.forEach((ex: any) => {
+          delete ex.samples;
+          delete ex.heart_rate_zones;
+          delete ex.speed_zones;
+        });
+      } else if (cleanData.exercises.exercises && Array.isArray(cleanData.exercises.exercises)) {
+         cleanData.exercises.exercises.forEach((ex: any) => {
+          delete ex.samples;
+          delete ex.heart_rate_zones;
+          delete ex.speed_zones;
+        });
+      }
+    }
 
     if (Object.keys(cleanData).length === 0) {
       return Response.json({ error: 'No health data found for this date' }, { status: 404 });
