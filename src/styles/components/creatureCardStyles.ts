@@ -60,6 +60,7 @@ export const creatureCardStyles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     alignSelf: 'center',
+    marginLeft: 8,
   },
   sportBadge: {
     fontSize: 12,
