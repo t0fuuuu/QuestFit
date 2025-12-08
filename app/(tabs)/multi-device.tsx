@@ -1,14 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Pressable, ActivityIndicator, Alert, FlatList } from 'react-native';
+import { ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { useMultiDeviceWorkout } from '@/src/hooks/useMultiDeviceWorkout';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Device } from 'react-native-ble-plx';
 import { liveStyles as styles } from '@/src/styles';
-import { DeviceHeartRateCard } from '@/components/fitness/DeviceHeartRateCard';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/src/services/firebase';
+
+// Components
+import { MultiDeviceScanner } from '@/components/multi-device/MultiDeviceScanner';
+import { ConnectedDevicesList } from '@/components/multi-device/ConnectedDevicesList';
+import { MultiDeviceControls } from '@/components/multi-device/MultiDeviceControls';
+import { GroupMetrics } from '@/components/multi-device/GroupMetrics';
 
 export default function MultiDeviceLiveWorkoutScreen() {
   const colorScheme = useColorScheme();
@@ -156,39 +161,6 @@ export default function MultiDeviceLiveWorkoutScreen() {
     );
   };
 
-  const getHeartRateZoneColor = (zone: number): string => {
-    switch (zone) {
-      case 1: return '#60A5FA'; // Light blue
-      case 2: return '#34D399'; // Green
-      case 3: return '#FBBF24'; // Yellow
-      case 4: return '#F97316'; // Orange
-      case 5: return '#EF4444'; // Red
-      default: return '#9CA3AF'; // Gray
-    }
-  };
-
-  const renderDevice = ({ item }: { item: Device }) => {
-    const ownerName = deviceOwners[item.id];
-    
-    return (
-      <Pressable
-        style={styles.deviceItem}
-        onPress={() => handleConnect(item)}
-      >
-        <View style={styles.deviceInfo}>
-          <Text style={styles.deviceName}>
-            {ownerName 
-              ? `${ownerName}'s ${item.name || 'Device'}`
-              : (item.name || 'Unknown Device')
-            }
-          </Text>
-          {!ownerName && <Text style={styles.deviceId}>{item.id}</Text>}
-        </View>
-        <Text style={styles.connectText}>Connect →</Text>
-      </Pressable>
-    );
-  };
-
   // Calculate aggregate heart rate from all devices
   const aggregateHeartRate = connectedDevices.length > 0 
     ? (() => {
@@ -213,175 +185,47 @@ export default function MultiDeviceLiveWorkoutScreen() {
       )}
 
       {/* Connected Devices */}
-      {connectedDevices.length > 0 && (
-        <View style={styles.section}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>
-              Connected Devices ({connectedDevices.length})
-            </Text>
-            {connectedDevices.length > 1 && (
-              <Pressable onPress={handleDisconnectAll}>
-                <Text style={{ color: '#EF4444', fontSize: 14, fontWeight: '600' }}>
-                  Disconnect All
-                </Text>
-              </Pressable>
-            )}
-          </View>
-          
-          {connectedDevices.map((deviceInfo) => (
-            <DeviceHeartRateCard
-              key={deviceInfo.device.id}
-              deviceInfo={deviceInfo}
-              heartRate={deviceHeartRates.get(deviceInfo.device.id) || null}
-              onDisconnect={() => handleDisconnectDevice(deviceInfo.device.id, deviceInfo.device.name || undefined)}
-              compact={connectedDevices.length > 2}
-            />
-          ))}
-
-          {/* Aggregate Heart Rate */}
-          {connectedDevices.length > 1 && (
-            <View style={[styles.heartRateSection, { marginTop: 12, backgroundColor: '#0F172A' }]}>
-              <Text style={styles.heartRateLabel}>Team Average Heart Rate</Text>
-              <View style={styles.heartRateDisplay}>
-                <Text style={styles.heartRateValue}>
-                  {aggregateHeartRate || '--'}
-                </Text>
-                <Text style={styles.heartRateUnit}>bpm</Text>
-                <Text style={styles.heartIcon}>👥❤️</Text>
-              </View>
-              {workoutMetrics && (
-                <View style={[styles.zoneIndicator, { backgroundColor: getHeartRateZoneColor(workoutMetrics.currentZone) }]}>
-                  <Text style={styles.zoneText}>Zone {workoutMetrics.currentZone}</Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-      )}
+      <ConnectedDevicesList
+        connectedDevices={connectedDevices}
+        deviceHeartRates={deviceHeartRates}
+        deviceOwners={deviceOwners}
+        onDisconnect={handleDisconnectDevice}
+        onDisconnectAll={handleDisconnectAll}
+        aggregateHeartRate={aggregateHeartRate}
+        currentZone={workoutMetrics?.currentZone}
+      />
 
       {/* Connection Status */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Add More Devices</Text>
-        
-        {!bluetoothEnabled && (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningText}>
-              📱 Bluetooth is disabled. Please enable it in your device settings.
-            </Text>
-          </View>
-        )}
-
-        <Pressable
-          style={[
-            styles.scanButton,
-            { backgroundColor: Colors[colorScheme ?? 'light'].tint },
-            isScanning && styles.scanButtonDisabled,
-          ]}
-          onPress={handleScan}
-          disabled={isScanning || !bluetoothEnabled}
-        >
-          {isScanning ? (
-            <ActivityIndicator color="#000000ff" />
-          ) : (
-            <Text style={styles.scanButtonText}>
-              {availableDevices.length > 0 ? 'Scan Again' : 'Scan for Polar Devices'}
-            </Text>
-          )}
-        </Pressable>
-
-        {availableDevices.length > 0 && (
-          <>
-            <Text style={styles.devicesFoundText}>
-              Found {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''}
-            </Text>
-            <FlatList
-              data={availableDevices.filter(d => !connectedDevices.find(cd => cd.device.id === d.id))}
-              renderItem={renderDevice}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-              ListEmptyComponent={
-                <Text style={{ color: '#94A3B8', textAlign: 'center', padding: 16 }}>
-                  All found devices are already connected
-                </Text>
-              }
-            />
-          </>
-        )}
-      </View>
+      <MultiDeviceScanner
+        isScanning={isScanning}
+        bluetoothEnabled={bluetoothEnabled}
+        availableDevices={availableDevices}
+        connectedDevices={connectedDevices}
+        deviceOwners={deviceOwners}
+        onScan={handleScan}
+        onConnect={handleConnect}
+      />
 
       {/* Workout Controls */}
-      {connectedDevices.length > 0 && (
-        <View style={styles.section}>
-          {!workoutActive ? (
-            <>
-              <Pressable
-                style={[styles.workoutButton, styles.startButton]}
-                onPress={handleStartWorkout}
-              >
-                <Text style={styles.workoutButtonText}>▶️ Start Workout</Text>
-              </Pressable>
-              <Text style={styles.autoStartHint}>
-                💡 Tip: Workout will auto-start when heart rate is detected
-              </Text>
-            </>
-          ) : (
-            <>
-              <View style={styles.buttonRow}>
-                {workoutPaused ? (
-                  <Pressable
-                    style={[styles.workoutButton, styles.resumeButton]}
-                    onPress={resumeWorkout}
-                  >
-                    <Text style={styles.workoutButtonText}>▶️ Resume</Text>
-                  </Pressable>
-                ) : (
-                  <Pressable
-                    style={[styles.workoutButton, styles.pauseButton]}
-                    onPress={pauseWorkout}
-                  >
-                    <Text style={styles.workoutButtonText}>⏸️ Pause</Text>
-                  </Pressable>
-                )}
-                <Pressable
-                  style={[styles.workoutButton, styles.endButton]}
-                  onPress={handleEndWorkout}
-                >
-                  <Text style={styles.workoutButtonText}>⏹️ End</Text>
-                </Pressable>
-              </View>
-              {pauseReason && (
-                <Text style={styles.pauseReasonText}>{pauseReason}</Text>
-              )}
-            </>
-          )}
-        </View>
-      )}
+      <MultiDeviceControls
+        workoutActive={workoutActive}
+        workoutPaused={workoutPaused}
+        pauseReason={pauseReason}
+        hasConnectedDevices={connectedDevices.length > 0}
+        onStart={handleStartWorkout}
+        onPause={pauseWorkout}
+        onResume={resumeWorkout}
+        onEnd={handleEndWorkout}
+      />
 
       {/* Workout Metrics */}
       {workoutActive && workoutMetrics && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Workout Metrics</Text>
-          <View style={styles.metricsGrid}>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>
-                {Math.floor(workoutMetrics.duration / 60)}:{(workoutMetrics.duration % 60).toString().padStart(2, '0')}
-              </Text>
-              <Text style={styles.metricLabel}>Duration</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.averageHeartRate}</Text>
-              <Text style={styles.metricLabel}>Avg HR</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.maxHeartRate}</Text>
-              <Text style={styles.metricLabel}>Max HR</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{workoutMetrics.caloriesBurned}</Text>
-              <Text style={styles.metricLabel}>Calories</Text>
-            </View>
-          </View>
-        </View>
+        <GroupMetrics
+          duration={workoutMetrics.duration}
+          averageHeartRate={workoutMetrics.averageHeartRate}
+          maxHeartRate={workoutMetrics.maxHeartRate}
+          caloriesBurned={workoutMetrics.caloriesBurned}
+        />
       )}
 
       {/* Previous Workout Results */}

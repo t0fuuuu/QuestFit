@@ -2,8 +2,8 @@
   "expo": {
     "name": "questfit",
     "slug": "questfit",
-    "owner": "pika3113",
-    "version": "0.1.0",
+    "owner": "questfit",
+    "version": "0.1.0", 
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "questfit",

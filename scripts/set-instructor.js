@@ -6,7 +6,7 @@
  */
 
 const admin = require('firebase-admin');
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config({ path: '.env' });
 
 // Initialize Firebase Admin
 const serviceAccount = {

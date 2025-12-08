@@ -1,13 +1,23 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import axios from 'axios';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'DELETE') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Use Basic Auth with client credentials
-  const BASIC_AUTH = 'OWFhNjJjZTEtNzAxNC00MmFkLTliY2YtZTIzNGI3NjQ2MjNmOjk0MTUxNzFmLWNiM2YtNDBiMy04OWYzLTFhYzVlYWI2ODk3NA==';
+  // Generate Basic Auth from environment variables
+  const clientId = process.env.POLAR_ACCESSLINK_CLIENT_ID;
+  const clientSecret = process.env.POLAR_ACCESSLINK_CLIENT_SECRET;
+  
+  if (!clientId || !clientSecret) {
+    return res.status(500).json({ error: 'Missing Polar credentials in environment' });
+  }
+  
+  const BASIC_AUTH = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
   try {
     // Step 1: Get the webhook ID

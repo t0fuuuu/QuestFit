@@ -457,18 +457,25 @@ class PolarOAuthService {
         const userRef = doc(db, 'users', userId);
         await updateDoc(userRef, {
           weight: 75,
+          height: 180,
           age: 30,
           gender: 'MALE',
+          'maximum-hr': 190,
+          'resting-hr': 60,
+          'aerobic-threshold': 140,
+          'anaerobic-threshold': 170,
+          'vo2-max': 55,
+          lastPhysicalSync: new Date().toISOString(),
           updatedAt: new Date(),
           displayName: 'Dev Polar Athlete'
         });
         return 'Dev Polar Athlete';
       }
 
-      console.log('Fetching user physical data from Polar via API...');
+      console.log('Fetching user profile from Polar via API...');
       
-      // Call our backend API endpoint to avoid CORS issues
-      const response = await axios.post(
+      // 1. Get Basic User Info (Name, Age, Gender, Basic Weight/Height)
+      const userResponse = await axios.post(
         'https://questfit-pi.vercel.app/api/polar/user-data',
         {
           accessToken: accessToken,
@@ -476,40 +483,77 @@ class PolarOAuthService {
         }
       );
 
-      console.log('✅ User physical data received:', response.data);
-      
-      const physicalData = response.data;
-      const weight = physicalData.weight || null;
-      const age = physicalData.birthdate ? this.calculateAge(physicalData.birthdate) : null;
-      const gender = physicalData.gender || null;
-      
-      // Extract and combine names for display name
-      const firstName = physicalData['first-name'] || '';
-      const lastName = physicalData['last-name'] || '';
+      const userData = userResponse.data;
+      const age = userData.birthdate ? this.calculateAge(userData.birthdate) : null;
+      const gender = userData.gender || null;
+      const firstName = userData['first-name'] || '';
+      const lastName = userData['last-name'] || '';
       const displayName = `${firstName} ${lastName}`.trim();
 
-      console.log('Parsed data - Weight:', weight, 'Age:', age, 'Gender:', gender);
-      if (displayName) console.log('Parsed name:', displayName);
-      
-      // Store in users collection
-      const userRef = doc(db, 'users', userId);
-      const updates: any = {
-        weight: weight,
+      let updates: any = {
         age: age,
         gender: gender,
         updatedAt: new Date(),
       };
 
-      // Only update display name if we got a valid one from Polar
       if (displayName) {
         updates.displayName = displayName;
       }
 
-      await updateDoc(userRef, updates);
+      // 2. Get Detailed Physical Info (Transaction Flow)
+      console.log('Fetching detailed physical info from Polar via Transaction API...');
+      try {
+        const physicalResponse = await axios.post(
+            'https://questfit-pi.vercel.app/api/polar/physical-info',
+            {
+                accessToken: accessToken,
+                polarUserId: polarUserId,
+            }
+        );
 
-      console.log('✅ User physical data and profile stored successfully in Firebase');
-      return displayName || null;
+        if (physicalResponse.data && physicalResponse.data.data && physicalResponse.data.data.length > 0) {
+            // Sort by created date descending to get the latest
+            const physicalInfos = physicalResponse.data.data.sort((a: any, b: any) => 
+                new Date(b.created).getTime() - new Date(a.created).getTime()
+            );
+            const latestInfo = physicalInfos[0];
+
+            console.log('✅ Latest physical info received:', latestInfo);
+
+            // Map fields
+            updates['weight'] = latestInfo.weight;
+            updates['height'] = latestInfo.height;
+            updates['maximum-hr'] = latestInfo['maximum-heart-rate'];
+            updates['resting-hr'] = latestInfo['resting-heart-rate'];
+            updates['aerobic-threshold'] = latestInfo['aerobic-threshold'];
+            updates['anaerobic-threshold'] = latestInfo['anaerobic-threshold'];
+            updates['vo2-max'] = latestInfo['vo2-max'];
+            updates['lastPhysicalSync'] = latestInfo.created; // "use created date as the sync time"
+        } else {
+            console.log('No new physical info from transaction. Using basic info.');
+            // Fallback to basic info if no transaction data
+            if (userData.weight) updates['weight'] = userData.weight;
+            if (userData.height) updates['height'] = userData.height;
+        }
+
+      } catch (err) {
+          console.error('Error fetching detailed physical info:', err);
+          // Fallback to basic info on error
+          if (userData.weight) updates['weight'] = userData.weight;
+          if (userData.height) updates['height'] = userData.height;
+      }
       
+      // Store in users collection
+      const userRef = doc(db, 'users', userId);
+      
+      // Remove undefined values
+      Object.keys(updates).forEach(key => updates[key] === undefined && delete updates[key]);
+
+      await updateDoc(userRef, updates);
+      console.log('✅ User physical data updated in Firestore');
+
+      return displayName || null;
+
     } catch (error) {
       console.error('❌ Error fetching user physical data:', error);
       if (axios.isAxiosError(error)) {
