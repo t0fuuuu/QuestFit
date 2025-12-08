@@ -4,6 +4,16 @@ import { Image } from 'expo-image';
 import { Creature } from '../../src/types/polar';
 import { creatureCardStyles as styles, getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
 
+const creatureImages = require.context(
+  '../../assets/images/creatures',
+  false,
+  /^\.\/creature_icon_\d+\.png$/
+);
+
+function getCreatureImage(id: string) {
+  return creatureImages(`./creature_icon_${id}.png`);
+}
+
 interface CreatureCardProps {
   creature: Creature;
   captured?: boolean;
@@ -38,14 +48,14 @@ export const CreatureCard: React.FC<CreatureCardProps> = ({ creature, captured =
         <View>
           {captured && (
             <Image 
-              source={require('../../assets/images/creatures/placeholder.png')} 
-              style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated' } as any} 
+              source={getCreatureImage(creature.id)}
+              style={{ width: '100%', height: 75, resizeMode: 'contain', imageRendering: 'pixelated' } as any} 
             />
           )}
           {!captured && (
             <Image 
-              source={require('../../assets/images/creatures/placeholder.png')} 
-              style={{ width: '100%', height: 100, resizeMode: 'contain', imageRendering: 'pixelated', filter: "grayscale(100%)" } as any} 
+              source={getCreatureImage(creature.id)}
+              style={{ width: '100%', height: 75, resizeMode: 'contain', imageRendering: 'pixelated', filter: "grayscale(100%)" } as any} 
             />
           )}
         </View>

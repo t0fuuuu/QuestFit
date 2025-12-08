@@ -568,6 +568,7 @@ export const xpStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
+    marginTop: 8,
   },
   refreshButtonText: {
     color: white,
