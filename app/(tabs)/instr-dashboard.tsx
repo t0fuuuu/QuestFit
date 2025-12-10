@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createElement } from 'react';
+import React, { useState, useEffect, useCallback, createElement } from 'react';
 import {
   View,
   ScrollView,
@@ -13,14 +13,29 @@ import { useAuth } from '@/src/hooks/useAuth';
 import { useInstructor } from '@/src/hooks/useInstructor';
 import { useInstructorStudents } from '@/src/hooks/useInstructorStudents';
 import { instructorDashboardStyles as styles } from '@/src/styles/screens/instructorDashboardStyles';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useDashboardData } from '@/components/instr-dashboard/hooks/useDashboardData';
 import { SleepScoreLineChart } from '@/components/instr-dashboard/components/SleepScoreLineChart';
+import { SleepScoreBarChart } from '@/components/instr-dashboard/components/SleepScoreBarChart';
+import { SleepScoreAreaChart } from '@/components/instr-dashboard/components/SleepScoreAreaChart';
+import { SleepScoreScatterChart } from '@/components/instr-dashboard/components/SleepScoreScatterChart';
 import { DailyStepsBarChart } from '@/components/instr-dashboard/components/DailyStepsBarChart';
+import { DailyStepsLineChart } from '@/components/instr-dashboard/components/DailyStepsLineChart';
+import { DailyStepsAreaChart } from '@/components/instr-dashboard/components/DailyStepsAreaChart';
+import { DailyStepsScatterChart } from '@/components/instr-dashboard/components/DailyStepsScatterChart';
 import { MonthlyExercisesBarChart } from '@/components/instr-dashboard/components/MonthlyExercisesBarChart';
+import { MonthlyExercisesLineChart } from '@/components/instr-dashboard/components/MonthlyExercisesLineChart';
+import { MonthlyExercisesAreaChart } from '@/components/instr-dashboard/components/MonthlyExercisesAreaChart';
+import { MonthlyExercisesScatterChart } from '@/components/instr-dashboard/components/MonthlyExercisesScatterChart';
 import { UserSelectionView } from '@/components/instr-dashboard/components/UserSelectionView';
 import { UserFilterDropdown } from '@/components/instr-dashboard/components/UserFilterDropdown';
+import { CHART_TYPE_KEY, STEPS_CHART_TYPE_KEY, EXERCISES_CHART_TYPE_KEY } from '@/app/instructor/settings';
+
+import { db } from '@/src/services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 export default function InstructorDashboard() {
   const { user } = useAuth();
@@ -32,6 +47,10 @@ export default function InstructorDashboard() {
   const [filteredUserId, setFilteredUserId] = useState<string>('all'); // 'all' = show all users
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  
+  const [sleepChartType, setSleepChartType] = useState<'line' | 'bar' | 'area' | 'scatter'>('line');
+  const [stepsChartType, setStepsChartType] = useState<'line' | 'bar' | 'area' | 'scatter'>('bar');
+  const [exercisesChartType, setExercisesChartType] = useState<'line' | 'bar' | 'area' | 'scatter'>('bar');
 
   const {
     allUsers,
@@ -44,6 +63,48 @@ export default function InstructorDashboard() {
     loadUserOverviews,
     loadSleepScoreData,
   } = useDashboardData(selectedUserIds, selectedDate);
+
+  useFocusEffect(
+    useCallback(() => {
+      const loadSettings = async () => {
+        try {
+          // 1. Try local storage first
+          const savedSleepType = await AsyncStorage.getItem(CHART_TYPE_KEY);
+          const savedStepsType = await AsyncStorage.getItem(STEPS_CHART_TYPE_KEY);
+          const savedExercisesType = await AsyncStorage.getItem(EXERCISES_CHART_TYPE_KEY);
+
+          if (['line', 'bar', 'area', 'scatter'].includes(savedSleepType || '')) setSleepChartType(savedSleepType as any);
+          if (['line', 'bar', 'area', 'scatter'].includes(savedStepsType || '')) setStepsChartType(savedStepsType as any);
+          if (['line', 'bar', 'area', 'scatter'].includes(savedExercisesType || '')) setExercisesChartType(savedExercisesType as any);
+
+          // 2. Try server storage if user is logged in
+          if (user?.uid) {
+            const userDoc = await getDoc(doc(db, 'users', user.uid));
+            if (userDoc.exists()) {
+              const data = userDoc.data();
+              const settings = data.settings || {};
+              
+              if (settings.sleepChartType && ['line', 'bar', 'area', 'scatter'].includes(settings.sleepChartType)) {
+                setSleepChartType(settings.sleepChartType);
+                await AsyncStorage.setItem(CHART_TYPE_KEY, settings.sleepChartType);
+              }
+              if (settings.stepsChartType && ['line', 'bar', 'area', 'scatter'].includes(settings.stepsChartType)) {
+                setStepsChartType(settings.stepsChartType);
+                await AsyncStorage.setItem(STEPS_CHART_TYPE_KEY, settings.stepsChartType);
+              }
+              if (settings.exercisesChartType && ['line', 'bar', 'area', 'scatter'].includes(settings.exercisesChartType)) {
+                setExercisesChartType(settings.exercisesChartType);
+                await AsyncStorage.setItem(EXERCISES_CHART_TYPE_KEY, settings.exercisesChartType);
+              }
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load chart settings', e);
+        }
+      };
+      loadSettings();
+    }, [user])
+  );
 
   useEffect(() => {
     if (isInstructor) {
@@ -266,6 +327,12 @@ export default function InstructorDashboard() {
               {selectedUserIds.length > 0 ? 'Edit Users' : 'Select Users'}
             </Text>
           </Pressable>
+          <Pressable
+            style={[styles.selectButton, { backgroundColor: '#f0f0f0', width: 40, paddingHorizontal: 0, justifyContent: 'center', alignItems: 'center' }]}
+            onPress={() => router.push('/instructor/settings')}
+          >
+            <Ionicons name="settings-outline" size={20} color="#333" />
+          </Pressable>
         </View>
       </View>
 
@@ -330,13 +397,24 @@ export default function InstructorDashboard() {
             </Pressable>
           )}
 
-          {/* Daily Steps Vertical Bar Chart */}
-          <DailyStepsBarChart chartData={stepsChartData} date={selectedDate} />
+          {/* Daily Steps Chart */}
+          {(() => {
+            switch (stepsChartType) {
+              case 'line':
+                return <DailyStepsLineChart chartData={stepsChartData} date={selectedDate} />;
+              case 'area':
+                return <DailyStepsAreaChart chartData={stepsChartData} date={selectedDate} />;
+              case 'scatter':
+                return <DailyStepsScatterChart chartData={stepsChartData} date={selectedDate} />;
+              case 'bar':
+              default:
+                return <DailyStepsBarChart chartData={stepsChartData} date={selectedDate} />;
+            }
+          })()}
 
-          {/* Monthly Exercise Bar Chart */}
-          <MonthlyExercisesBarChart 
-            chartData={chartData} 
-            onUserPress={(userId) => {
+          {/* Monthly Exercise Chart */}
+          {(() => {
+            const onUserPress = (userId: string) => {
               router.push({
                 pathname: '/instructor/user-detail',
                 params: { 
@@ -344,8 +422,20 @@ export default function InstructorDashboard() {
                   date: selectedDate.toISOString()
                 }
               });
-            }}
-          />
+            };
+
+            switch (exercisesChartType) {
+              case 'line':
+                return <MonthlyExercisesLineChart chartData={chartData} onUserPress={onUserPress} />;
+              case 'area':
+                return <MonthlyExercisesAreaChart chartData={chartData} onUserPress={onUserPress} />;
+              case 'scatter':
+                return <MonthlyExercisesScatterChart chartData={chartData} onUserPress={onUserPress} />;
+              case 'bar':
+              default:
+                return <MonthlyExercisesBarChart chartData={chartData} onUserPress={onUserPress} />;
+            }
+          })()}
 
           {/* View All Exercises Button */}
           <Pressable
@@ -372,20 +462,77 @@ export default function InstructorDashboard() {
             </Text>
           </Pressable>
 
-          {/* Sleep Score Line Chart */}
+          {/* Sleep Score Chart */}
           {loadingSleepData ? (
             <View style={{ padding: 16, backgroundColor: 'white', marginBottom: 20, borderRadius: 8, alignItems: 'center' }}>
               <ActivityIndicator size="small" color="#FF6B35" />
               <Text style={{ color: '#666', marginTop: 8, fontSize: 12 }}>Loading sleep data...</Text>
             </View>
           ) : (
-            <SleepScoreLineChart 
-              sleepData={filteredSleepData}      // Filtered data for individual lines
-              allSleepData={sleepScoreData}       // Full data for average calculation
-              dates={sleepDates}
-              allUsers={allUsers}
-            />
+            (() => {
+              switch (sleepChartType) {
+                case 'bar':
+                  return (
+                    <SleepScoreBarChart 
+                      sleepData={filteredSleepData}
+                      dates={sleepDates}
+                      allUsers={allUsers}
+                    />
+                  );
+                case 'area':
+                  return (
+                    <SleepScoreAreaChart 
+                      sleepData={filteredSleepData}
+                      dates={sleepDates}
+                      allUsers={allUsers}
+                    />
+                  );
+                case 'scatter':
+                  return (
+                    <SleepScoreScatterChart 
+                      sleepData={filteredSleepData}
+                      dates={sleepDates}
+                      allUsers={allUsers}
+                    />
+                  );
+                case 'line':
+                default:
+                  return (
+                    <SleepScoreLineChart 
+                      sleepData={filteredSleepData}      // Filtered data for individual lines
+                      allSleepData={sleepScoreData}       // Full data for average calculation
+                      dates={sleepDates}
+                      allUsers={allUsers}
+                    />
+                  );
+              }
+            })()
           )}
+
+          {/* View All Sleep Button */}
+          <Pressable
+            style={{
+              backgroundColor: '#3F51B5',
+              padding: 12,
+              borderRadius: 8,
+              alignItems: 'center',
+              marginBottom: 20,
+              marginHorizontal: 16,
+            }}
+            onPress={() => {
+              router.push({
+                pathname: '/instructor/all-sleep',
+                params: { 
+                  userIds: displayedUserIds.join(','),
+                  initialDate: selectedDate.toISOString()
+                }
+              });
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+              View All Sleep Details
+            </Text>
+          </Pressable>
         </View>
       )}
     </ScrollView>
