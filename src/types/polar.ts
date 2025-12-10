@@ -98,7 +98,16 @@ export interface UserGameProfile {
   totalAvgHeartRate: number; // average of all workouts
   capturedCreatures: string[]; // Just store creature IDs
   achievements: Achievement[];
+  redeemedRewards?: RedeemedReward[];
   currentQuest?: Quest;
+}
+
+export interface RedeemedReward {
+  id: string;
+  rewardId: string;
+  name: string;
+  redeemedAt: string;
+  code?: string;
 }
 
 export interface Achievement {
