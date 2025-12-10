@@ -23,12 +23,30 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
   loading = false,
 }) => {
   const [scrolledToBottom, setScrolledToBottom] = useState(false);
+  const [scrollViewHeight, setScrollViewHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+
+  // Check if content fits on screen whenever dimensions change
+  React.useEffect(() => {
+    if (scrollViewHeight > 0 && contentHeight > 0) {
+      // If content is smaller than scroll view (plus buffer), user has "seen" it all
+      if (contentHeight <= scrollViewHeight + 50) {
+        setScrolledToBottom(true);
+      }
+    }
+  }, [scrollViewHeight, contentHeight]);
 
   const handleScroll = (event: any) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isAtBottom =
       contentOffset.y + layoutMeasurement.height >= contentSize.height - 50;
-    setScrolledToBottom(isAtBottom);
+    
+    // Only update if we haven't reached bottom yet or if we scrolled back up (optional)
+    // But for consent, usually once true stays true is fine, or dynamic is fine.
+    // The existing logic was just setting it.
+    if (isAtBottom) {
+        setScrolledToBottom(true);
+    }
   };
 
   return (
@@ -52,6 +70,8 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({
           style={styles.scrollContainer}
           onScroll={handleScroll}
           scrollEventThrottle={16}
+          onLayout={(e) => setScrollViewHeight(e.nativeEvent.layout.height)}
+          onContentSizeChange={(_, height) => setContentHeight(height)}
         >
           <View style={styles.content}>
             {/* Section 1 */}
