@@ -12,6 +12,7 @@ const POLAR_CLIENT_ID = '9aa62ce1-7014-42ad-9bcf-e234b764623f';
 const POLAR_CLIENT_SECRET = '9415171f-cb3f-40b3-89f3-1ac5eab68974';
 const POLAR_AUTH_URL = 'https://flow.polar.com/oauth2/authorization';
 const POLAR_TOKEN_URL = 'https://polarremote.com/v2/oauth2/token';
+const BASE_URL = process.env.EXPO_PUBLIC_BASE_URL || 'https://questfit.life';
 
 // Helper function to convert string to base64 (React Native compatible)
 function base64Encode(str: string): string {
@@ -99,11 +100,11 @@ class PolarOAuthService {
    */
   getAuthorizationUrl(): string {
     // Determine redirect URI based on platform
-    let redirectUri = 'https://questfit-pi.vercel.app';
+    let redirectUri = BASE_URL;
     
     if (Platform.OS !== 'web') {
       // On mobile, use the Vercel function that redirects to the app scheme
-      redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+      redirectUri = `${BASE_URL}/api/auth/mobile-callback`;
     }
     
     // Request all available scopes including webhook management
@@ -179,9 +180,9 @@ class PolarOAuthService {
       }
 
       // Determine redirect URI based on platform for the token exchange
-      let redirectUri = 'https://questfit-pi.vercel.app';
+      let redirectUri = BASE_URL;
       if (Platform.OS !== 'web') {
-        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+        redirectUri = `${BASE_URL}/api/auth/mobile-callback`;
       }
 
       const authUrl = this.getAuthorizationUrl();
@@ -310,9 +311,9 @@ class PolarOAuthService {
   async startOAuthFlow(userId: string): Promise<PolarUserTokens | null> {
     try {
       // Determine redirect URI based on platform
-      let redirectUri = 'https://questfit-pi.vercel.app';
+      let redirectUri = BASE_URL;
       if (Platform.OS !== 'web') {
-        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+        redirectUri = `${BASE_URL}/api/auth/mobile-callback`;
       }
 
       const authUrl = this.getAuthorizationUrl();
@@ -367,9 +368,9 @@ class PolarOAuthService {
       
       // Determine redirect URI based on platform for the token exchange
       // This MUST match what was sent in the authorization request
-      let redirectUri = 'https://questfit-pi.vercel.app';
+      let redirectUri = BASE_URL;
       if (Platform.OS !== 'web') {
-        redirectUri = 'https://questfit-pi.vercel.app/api/auth/mobile-callback';
+        redirectUri = `${BASE_URL}/api/auth/mobile-callback`;
       }
 
       const response = await axios.post<PolarTokenResponse>(
@@ -429,7 +430,7 @@ class PolarOAuthService {
       }
 
       const response = await axios.post(
-        'https://questfit-pi.vercel.app/api/polar/register-user',
+        `${BASE_URL}/api/polar/register-user`,
         {
           accessToken: accessToken,
           userId: userId,
@@ -476,7 +477,7 @@ class PolarOAuthService {
       
       // 1. Get Basic User Info (Name, Age, Gender, Basic Weight/Height)
       const userResponse = await axios.post(
-        'https://questfit-pi.vercel.app/api/polar/user-data',
+        `${BASE_URL}/api/polar/user-data`,
         {
           accessToken: accessToken,
           polarUserId: polarUserId,
@@ -504,7 +505,7 @@ class PolarOAuthService {
       console.log('Fetching detailed physical info from Polar via Transaction API...');
       try {
         const physicalResponse = await axios.post(
-            'https://questfit-pi.vercel.app/api/polar/physical-info',
+            `${BASE_URL}/api/polar/physical-info`,
             {
                 accessToken: accessToken,
                 polarUserId: polarUserId,
@@ -664,7 +665,7 @@ class PolarOAuthService {
       if (accessToken && polarUserId && !IS_DEV_MODE) {
         try {
           await axios.delete(
-            'https://questfit-pi.vercel.app/api/polar/disconnect-user',
+            `${BASE_URL}/api/polar/disconnect-user`,
             {
               data: {
                 accessToken: accessToken,
