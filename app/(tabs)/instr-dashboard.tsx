@@ -173,6 +173,7 @@ export default function InstructorDashboard() {
     const overview = userOverviews.get(userId);
 
     return {
+      id: userId,
       name: foundUser?.displayName || userId,
       value: overview?.totalMonthExercises || 0,
     };
@@ -333,7 +334,43 @@ export default function InstructorDashboard() {
           <DailyStepsBarChart chartData={stepsChartData} date={selectedDate} />
 
           {/* Monthly Exercise Bar Chart */}
-          <MonthlyExercisesBarChart chartData={chartData} />
+          <MonthlyExercisesBarChart 
+            chartData={chartData} 
+            onUserPress={(userId) => {
+              router.push({
+                pathname: '/instructor/user-detail',
+                params: { 
+                  userId: userId,
+                  date: selectedDate.toISOString()
+                }
+              });
+            }}
+          />
+
+          {/* View All Exercises Button */}
+          <Pressable
+            style={{
+              backgroundColor: '#FF6B35',
+              padding: 12,
+              borderRadius: 8,
+              alignItems: 'center',
+              marginBottom: 20,
+              marginHorizontal: 16,
+            }}
+            onPress={() => {
+              router.push({
+                pathname: '/instructor/all-exercises',
+                params: { 
+                  userIds: displayedUserIds.join(','),
+                  initialDate: selectedDate.toISOString()
+                }
+              });
+            }}
+          >
+            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+              View All Exercises Details
+            </Text>
+          </Pressable>
 
           {/* Sleep Score Line Chart */}
           {loadingSleepData ? (
