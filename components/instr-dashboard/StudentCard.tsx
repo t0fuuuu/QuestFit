@@ -1,0 +1,372 @@
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Modal, SafeAreaView } from 'react-native';
+import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import Sparkline from './Sparkline';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+export interface StudentStats {
+  id: string;
+  displayName: string;
+  photoURL?: string;
+  lastActive?: string;
+  
+  // History arrays (7 days)
+  hrHistory: number[];
+  distanceHistory: number[];
+  sleepHistory: number[];
+  caloriesHistory: number[];
+  labels: string[];
+
+  // Averages
+  avgHr: number;
+  avgDistance: number;
+  avgSleep: number;
+  avgCalories: number;
+  
+  trend: 'up' | 'down' | 'stable';
+}
+
+export type ChartType = 'line' | 'bar' | 'area' | 'scatter';
+
+interface StudentCardProps {
+  item: StudentStats;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (id: string) => void;
+  chartConfig?: Record<MetricType, ChartType>;
+}
+
+type MetricType = 'hr' | 'distance' | 'sleep' | 'calories';
+
+export const StudentCard: React.FC<StudentCardProps> = ({ 
+  item, 
+  isSelectionMode = false, 
+  isSelected = false, 
+  onToggleSelection,
+  chartConfig = { hr: 'line', distance: 'bar', sleep: 'line', calories: 'area' }
+}) => {
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>('distance');
+  const [isChartExpanded, setIsChartExpanded] = useState(false);
+
+  const handlePress = () => {
+    if (isSelectionMode && onToggleSelection) {
+      onToggleSelection(item.id);
+    } else {
+      router.push({ pathname: '/instructor/user-detail', params: { userId: item.id } });
+    }
+  };
+
+  const getChartData = () => {
+    switch (selectedMetric) {
+      case 'hr': return item.hrHistory;
+      case 'distance': return item.distanceHistory;
+      case 'sleep': return item.sleepHistory;
+      case 'calories': return item.caloriesHistory;
+      default: return item.distanceHistory;
+    }
+  };
+
+  const getChartColor = () => {
+    switch (selectedMetric) {
+      case 'hr': return 'rgba(255, 107, 53, 1)'; // Orange
+      case 'distance': return 'rgba(46, 134, 171, 1)'; // Blue
+      case 'sleep': return 'rgba(162, 59, 114, 1)'; // Purple
+      case 'calories': return 'rgba(253, 203, 110, 1)'; // Yellow
+      default: return 'rgba(46, 134, 171, 1)';
+    }
+  };
+
+  const getChartLabel = () => {
+    switch (selectedMetric) {
+      case 'hr': return 'Avg Heart Rate (bpm)';
+      case 'distance': return 'Distance (m)';
+      case 'sleep': return 'Sleep Score';
+      case 'calories': return 'Active Calories';
+      default: return '';
+    }
+  };
+
+  const data = getChartData();
+  const hasData = data.some(v => v > 0);
+
+  return (
+    <TouchableOpacity 
+      style={[styles.card, isSelected && styles.cardSelected]}
+      onPress={handlePress}
+      activeOpacity={0.9}
+    >
+      <View style={styles.cardHeader}>
+        <View style={styles.userInfo}>
+          {isSelectionMode && (
+            <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
+              {isSelected && <Ionicons name="checkmark" size={16} color="#FFF" />}
+            </View>
+          )}
+          <View style={styles.avatarContainer}>
+            {item.photoURL ? (
+              <Image source={{ uri: item.photoURL }} style={styles.avatar} />
+            ) : (
+              <Text style={styles.avatarText}>{item.displayName.charAt(0).toUpperCase()}</Text>
+            )}
+          </View>
+          <View>
+            <Text style={styles.userName}>{item.displayName}</Text>
+            <Text style={styles.lastActive}>Last Active: {item.lastActive}</Text>
+          </View>
+        </View>
+        <View style={styles.trendContainer}>
+          {item.trend === 'up' && <Ionicons name="trending-up" size={24} color="#FF6B35" />}
+          {item.trend === 'down' && <Ionicons name="trending-down" size={24} color="#00B894" />}
+          {item.trend === 'stable' && <Ionicons name="remove" size={24} color="#636E72" />}
+        </View>
+      </View>
+
+      {/* Stats Grid - Clickable to switch chart */}
+      <View style={styles.statsGrid}>
+        <TouchableOpacity 
+          style={[styles.statItem, selectedMetric === 'distance' && styles.statItemActive]}
+          onPress={() => setSelectedMetric('distance')}
+        >
+          <Ionicons name="walk" size={16} color="#2E86AB" />
+          <Text style={styles.statValue}>{item.avgDistance.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>Dist (m)</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.statItem, selectedMetric === 'hr' && styles.statItemActive]}
+          onPress={() => setSelectedMetric('hr')}
+        >
+          <Ionicons name="heart" size={16} color="#FF6B35" />
+          <Text style={styles.statValue}>{item.avgHr > 0 ? item.avgHr : '-'}</Text>
+          <Text style={styles.statLabel}>BPM</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.statItem, selectedMetric === 'sleep' && styles.statItemActive]}
+          onPress={() => setSelectedMetric('sleep')}
+        >
+          <Ionicons name="moon" size={16} color="#A23B72" />
+          <Text style={styles.statValue}>{item.avgSleep > 0 ? item.avgSleep : '-'}</Text>
+          <Text style={styles.statLabel}>Sleep</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.statItem, selectedMetric === 'calories' && styles.statItemActive]}
+          onPress={() => setSelectedMetric('calories')}
+        >
+          <Ionicons name="flame" size={16} color="#FDCB6E" />
+          <Text style={styles.statValue}>{item.avgCalories.toLocaleString()}</Text>
+          <Text style={styles.statLabel}>Kcal</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.chartContainer}>
+        <Text style={styles.chartLabel}>{getChartLabel()} (Last 7 Days)</Text>
+        <TouchableOpacity 
+          onPress={() => setIsChartExpanded(true)}
+          activeOpacity={0.8}
+          style={{ width: '100%' }}
+        >
+          <View style={{ height: 120, width: '100%', overflow: 'hidden', borderRadius: 16 }}>
+            <Sparkline 
+              data={hasData ? data : [0]} 
+              labels={item.labels}
+              color={getChartColor()} 
+              height={120}
+              type={chartConfig[selectedMetric]}
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      <Modal
+        visible={isChartExpanded}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsChartExpanded(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.expandedChartContainer}>
+            <View style={styles.expandedHeader}>
+              <View>
+                <Text style={styles.expandedTitle}>{item.displayName}</Text>
+                <Text style={styles.expandedSubtitle}>{getChartLabel()}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsChartExpanded(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Ionicons name="close-circle" size={32} color="#636E72" />
+              </TouchableOpacity>
+            </View>
+            <View style={{ height: 300, width: '100%', marginTop: 20 }}>
+              <Sparkline 
+                data={hasData ? data : [0]} 
+                labels={item.labels}
+                color={getChartColor()} 
+                height={300}
+                type={chartConfig[selectedMetric]}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </TouchableOpacity>
+  );
+};
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  cardSelected: {
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFF5F0',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxSelected: {
+    backgroundColor: '#FF6B35',
+    borderColor: '#FF6B35',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FF6B35',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  avatar: {
+    width: 48,
+    height: 48,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  userName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2D3436',
+  },
+  lastActive: {
+    fontSize: 12,
+    color: '#636E72',
+    marginTop: 2,
+  },
+  trendContainer: {
+    padding: 8,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 8,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 8,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  statItemActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2D3436',
+    marginTop: 4,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#636E72',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  chartContainer: {
+    alignItems: 'center',
+  },
+  chartLabel: {
+    fontSize: 12,
+    color: '#B2BEC3',
+    marginBottom: 8,
+    alignSelf: 'flex-start',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  expandedChartContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxWidth: 500,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  expandedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  expandedTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2D3436',
+  },
+  expandedSubtitle: {
+    fontSize: 14,
+    color: '#636E72',
+    marginTop: 4,
+  },
+});

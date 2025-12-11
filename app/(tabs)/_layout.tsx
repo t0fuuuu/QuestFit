@@ -254,6 +254,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon6 name="chalkboard-user" color={color} size={24} />,
         }}
       />
+      <Tabs.Screen
+        name="instr-dashboard.old"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
 
     {/* Polar Link Modal */}
