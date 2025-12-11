@@ -188,6 +188,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="battle"
+        options={{
+          // href: null,
+          title: 'Battle',
+          headerTitle: 'QuestFit',
+          tabBarIcon: ({ color }) => <TabBarIcon6 name="burst" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="multi-device"
         options={{
           title: 'Workout',

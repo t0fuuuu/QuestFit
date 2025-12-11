@@ -1,5 +1,27 @@
 import { StyleSheet } from 'react-native';
 import { white, black } from '@/constants/Colors';
+import { Creature } from './types/polar';
+
+export const getRarityColor = (type: Creature['rarity']) => {
+  switch (type) {
+  case 'rare': return '#43C073';
+  case 'epic': return '#8B5CF6';
+  case 'legendary': return '#F59E0B';
+  default: return '#3BA8F6';
+  }
+};
+
+export const getSportColor = (type: Creature['sport']) => {
+  switch (type) {
+    case 'RUNNING': return ['#AE0000', '#FFFFFF'];
+    case 'SWIMMING': return ['#53E8f6', '#1F2937'];
+    case 'HIKING': return ['#13780E', '#FFFFFF'];
+    case 'FITNESS': return ['#FB008A', '#FFFFFF'];
+    case 'CYCLING': return ['#FFF42A', '#1F2937'];
+    case 'CIRCUIT': return ['#BB00FF', '#FFFFFF'];
+    default: return ['#676767', '#FFFFFF'];
+  }
+};
 
 // Home/Index Tab Styles
 export const indexStyles = StyleSheet.create({
@@ -89,6 +111,114 @@ export const twoStyles = StyleSheet.create({
   },
   listContainer: {
     padding: 8,
+  },
+});
+
+// Battle Tab Styles
+export const battleStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  username: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginLeft: 4,
+    marginRight: 4,
+    marginBottom: -8,
+  },
+  header: {
+    padding: 8,
+    paddingLeft: 16,
+    paddingRight: 16,
+    backgroundColor: white,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  creatureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  creatureIcon: { 
+    width: 60, 
+    height: 60, 
+    resizeMode: 'contain', 
+    imageRendering: 'pixelated' } as any,
+  creatureIconContainer: {
+    backgroundColor: '#FFFFFF',
+    margin: 2,
+    borderRadius: 12,
+    borderWidth: 2
+  },
+  battleArea: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  creature: {
+    width: '50%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthBarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+    height: 20,
+    marginTop: 4,
+    marginRight: 64,
+    marginLeft: 32,
+  },
+  emptyHealthBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    borderRadius: 4,
+    backgroundColor: '#6B7280',
+    height: '100%',
+    width: '80%',
+    maxWidth: 300,
+    marginTop: 4,
+  },
+  healthBar: {
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    height: '100%',
+    width: '75%',
+  },
+  creatureStats: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    backgroundColor: 'transparent',
+    marginRight: 64,
+    marginLeft: 32,
+  },
+  creatureName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: black,
+    marginBottom: 4,
+  },
+  creatureRarity: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  creatureSportBadge: {
+    fontSize: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: -4,
+    marginLeft: 8,
+  },
+  creatureStat: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
   },
 });
 

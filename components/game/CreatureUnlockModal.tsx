@@ -2,7 +2,7 @@ import React from 'react';
 import { Modal, View, Text, Pressable } from 'react-native';
 import { Creature } from '../../src/types/polar';
 import { creatureUnlockModalStyles as styles } from '@/src/styles/components/creatureUnlockModalStyles';
-import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
+import { getRarityColor, getSportColor } from '@/src/styles';
 
 interface CreatureUnlockModalProps {
   visible: boolean;

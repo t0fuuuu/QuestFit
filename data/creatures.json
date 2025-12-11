@@ -132,9 +132,9 @@
       "description":"A mystical protector that appears after sustained cardiovascular excellence.",
       "sport":"GENERAL",
       "stats": { 
-            "power":95,
+            "power":105,
             "speed":70,
-            "endurance":140
+            "endurance":170
       },
       "unlockRequirements": { 
             "minCalories":800,
@@ -276,9 +276,9 @@
       "description":"A one of a kind crocodile.",
       "sport":"GENERAL",
       "stats": { 
-            "power":120,
-            "speed":50,
-            "endurance":90
+            "power":210,
+            "speed":88,
+            "endurance":157
       },
       "unlockRequirements": { 
             "minCalories":500
@@ -403,8 +403,8 @@
       "sport":"CIRCUIT",
       "stats": { 
             "power":111,
-            "speed":111,
-            "endurance":111
+            "speed":222,
+            "endurance":333
       },
       "unlockRequirements": { 
             "minCalories":1111,
@@ -763,7 +763,7 @@
       "sport":"GENERAL",
       "stats": { 
             "power":55,
-            "speed":5,
+            "speed":55,
             "endurance":55
       },
       "unlockRequirements": { 
@@ -1172,9 +1172,9 @@
       "description":"A spectral hunter seen only by those who train with perfect consistency.",
       "sport":"GENERAL",
       "stats": { 
-            "power":160,
-            "speed":150,
-            "endurance":140
+            "power":180,
+            "speed":170,
+            "endurance":160
       },
       "unlockRequirements": { 
             
@@ -1887,7 +1887,7 @@
     {
       "id":"106",
       "name":"Mirefang Creeper",
-      "rarity":"common",
+      "rarity":"rare",
       "description":"A swamp-dwelling crawler with modest strength, slow speed, and stubborn endurance.",
       "sport":"SWIMMING",
       "stats": { 
@@ -1923,7 +1923,7 @@
     {
       "id":"108",
       "name":"Rambletooth Grazer",
-      "rarity":"common",
+      "rarity":"rare",
       "description":"A gentle herbivore with mild strength, steady pace, and dependable endurance.",
       "sport":"FITNESS",
       "stats": { 
@@ -1941,13 +1941,13 @@
     {
       "id":"109",
       "name":"Rusthide Burrower",
-      "rarity":"common",
+      "rarity":"rare",
       "description":"A small tunneler with surprising toughness, moderate speed, and sturdy persistence.",
       "sport":"HIKING",
       "stats": { 
-            "power":125,
-            "speed":100,
-            "endurance":100
+            "power":100,
+            "speed":80,
+            "endurance":80
       },
       "unlockRequirements": { 
             "minCalories":700,
@@ -1959,7 +1959,7 @@
     {
       "id":"110",
       "name":"Shadowmane Skulker",
-      "rarity":"epic",
+      "rarity":"legendary",
       "description":"A swift night-stalking beast with sharp power and impressive stamina reserves.",
       "sport":"RUNNING",
       "stats": { 
@@ -1977,7 +1977,7 @@
     {
       "id":"111",
       "name":"Stormroot Charger",
-      "rarity":"epic",
+      "rarity":"legendary",
       "description":"A bulky creature empowered by earth energy, charging quickly with immense durability.",
       "sport":"FITNESS",
       "stats": { 
@@ -1995,7 +1995,7 @@
     {
       "id":"112",
       "name":"Ironwing Stryker",
-      "rarity":"epic",
+      "rarity":"legendary",
       "description":"A metal-feathered raptor boasting strong power, razor speed, and fierce endurance.",
       "sport":"FITNESS",
       "stats": { 
@@ -2032,12 +2032,12 @@
       "id":"114",
       "name":"Ling Gang Guli",
       "rarity":"legendary",
-      "description":"A fabulous pig-knight with sparkly armor, mediocre power, and dramatic flair.",
+      "description":"A fabulous pig-knight with sparkly armor, power, and dramatic flair.",
       "sport":"HIKING",
       "stats": { 
             "power":300,
-            "speed":400,
-            "endurance":250
+            "speed":150,
+            "endurance":450
       },
       "unlockRequirements": { 
             "minCalories":1200,

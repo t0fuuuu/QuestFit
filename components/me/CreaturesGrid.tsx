@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Text } from '@/components/Themed';
 import { xpStyles as styles } from '@/src/styles';
 import { Creature } from '@/src/types/polar';
-import { getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
+import { getRarityColor, getSportColor } from '@/src/styles';
 
 interface CreaturesGridProps {
   creatures: Creature[];
