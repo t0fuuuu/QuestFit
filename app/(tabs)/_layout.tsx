@@ -142,15 +142,16 @@ export default function TabLayout() {
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
         headerTitleStyle: {
-          flex: 1,
           textAlign: 'center',
         },
         headerLeft: () => (
-          <Image 
-            source={require('@/assets/images/icon.png')} 
-            style={styles.headerIcon}
-            resizeMode="contain"
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
+            <Image 
+              source={require('@/assets/images/icon.png')} 
+              style={{ width: 32, height: 32, borderRadius: 16 }}
+              resizeMode="contain"
+            />
+          </View>
         ),
         headerRight: () => (
           <View style={styles.headerRightContainer}>
@@ -171,7 +172,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="creatures"
         options={{
-          // href: null,
+          href: null,
           title: 'Creatures',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="gitlab" color={color} />,
@@ -189,7 +190,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="multi-device"
         options={{
-          title: 'Multi device',
+          title: 'Workout',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon6 name="people-robbery" color={color} size={24} />,
         }}
@@ -207,6 +208,7 @@ export default function TabLayout() {
         name="test"
         options={{
           title: 'Test',
+          href: null,
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="flask" color={color} />,
         }}
@@ -250,12 +252,6 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  headerIcon: {
-    width: 32,
-    height: 32,
-    marginLeft: 16,
-    borderRadius: 16,
-  },
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',

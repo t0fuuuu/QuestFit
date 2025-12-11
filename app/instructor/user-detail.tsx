@@ -105,7 +105,7 @@ export default function UserDetailScreen() {
     setLoadingAI(true);
     try {
       // Use Vercel production URL by default
-      const apiUrl = 'https://questfit-pi.vercel.app/api/openai/generate-summary';
+      const apiUrl = `${process.env.EXPO_PUBLIC_BASE_URL || 'https://questfit.life'}/api/openai/generate-summary`;
 
       const dateStr = formatDate(selectedDate);
       const response = await fetch(apiUrl, {

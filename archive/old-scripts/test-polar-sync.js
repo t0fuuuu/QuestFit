@@ -21,7 +21,7 @@ const testDate = dateArg ? dateArg.split('=')[1] : null;
 const LOCAL_URL = 'http://localhost:3000/api/cron/daily-polar-sync';
 const PROD_URL = process.env.VERCEL_URL 
   ? `https://${process.env.VERCEL_URL}/api/cron/daily-polar-sync`
-  : 'https://questfit-pi.vercel.app/api/cron/daily-polar-sync';
+  : `${process.env.EXPO_PUBLIC_BASE_URL || 'https://questfit.life'}/api/cron/daily-polar-sync`;
 
 const url = isProd ? PROD_URL : LOCAL_URL;
 const cronSecret = process.env.CRON_SECRET || 'test-secret';

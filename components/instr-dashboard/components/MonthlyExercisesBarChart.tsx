@@ -1,12 +1,13 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Text } from '@/components/Themed';
 
 interface MonthlyExercisesBarChartProps {
-  chartData: { name: string; value: number }[];
+  chartData: { id: string; name: string; value: number }[];
+  onUserPress?: (userId: string) => void;
 }
 
-export const MonthlyExercisesBarChart = ({ chartData }: MonthlyExercisesBarChartProps) => {
+export const MonthlyExercisesBarChart = ({ chartData, onUserPress }: MonthlyExercisesBarChartProps) => {
   const maxValue = Math.max(...chartData.map(d => d.value), 1);
   const axisMax = maxValue + 5;
   
@@ -19,7 +20,14 @@ export const MonthlyExercisesBarChart = ({ chartData }: MonthlyExercisesBarChart
         {chartData.map((item, index) => {
           const barWidth = (item.value / axisMax) * 100;
           return (
-            <View key={index} style={{ marginBottom: 16 }}>
+            <Pressable 
+              key={index} 
+              style={({ pressed }) => ({ 
+                marginBottom: 16,
+                opacity: pressed ? 0.7 : 1 
+              })}
+              onPress={() => onUserPress && onUserPress(item.id)}
+            >
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 {/* User name */}
                 <Text 
@@ -27,7 +35,8 @@ export const MonthlyExercisesBarChart = ({ chartData }: MonthlyExercisesBarChart
                     fontSize: 12, 
                     color: '#000',
                     width: 100,
-                    fontWeight: '500'
+                    fontWeight: '500',
+                    textDecorationLine: onUserPress ? 'underline' : 'none'
                   }}
                   numberOfLines={1}
                 >
@@ -70,7 +79,7 @@ export const MonthlyExercisesBarChart = ({ chartData }: MonthlyExercisesBarChart
                   </View>
                 </View>
               </View>
-            </View>
+            </Pressable>
           );
         })}
         
