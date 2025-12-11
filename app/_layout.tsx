@@ -12,6 +12,7 @@ import { useAuth } from '@/src/hooks/useAuth';
 import { SignInScreen } from '@/components/auth/SignInScreen';
 import { View, ActivityIndicator } from 'react-native';
 import DebugConsole from '@/components/DebugConsole';
+import { IS_DEV_MODE } from '@/constants/DevConfig';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -86,7 +87,7 @@ function RootLayoutNav() {
           })()}
         </>
       )}
-      <DebugConsole />
+      {IS_DEV_MODE && <DebugConsole />}
     </ThemeProvider>
   );
 }
