@@ -9,12 +9,15 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  SafeAreaView
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Text } from '@/components/Themed';
 import { useAuth } from '@/src/hooks/useAuth';
 import { useInstructor } from '@/src/hooks/useInstructor';
+import { useInstructorStudents } from '@/src/hooks/useInstructorStudents';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '@/src/services/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
@@ -25,6 +28,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 export default function InstructorDashboard() {
   const { user } = useAuth();
   const { isInstructor, loading: instructorLoading } = useInstructor(user?.uid);
+  const { selectedUserIds, toggleUser } = useInstructorStudents(user?.uid);
   
   const [students, setStudents] = useState<StudentStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,10 +36,15 @@ export default function InstructorDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Filtering & Selection State
-  const [daysToFetch, setDaysToFetch] = useState<7 | 14 | 30>(7);
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date; type: '7d' | '14d' | '30d' | 'custom' }>({
+    start: new Date(new Date().setDate(new Date().getDate() - 6)), // 7 days including today
+    end: new Date(),
+    type: '7d'
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
   const [modalVisible, setModalVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Chart Configuration State
   const [chartConfig, setChartConfig] = useState<Record<'hr' | 'distance' | 'sleep' | 'calories', ChartType>>({
@@ -45,15 +54,10 @@ export default function InstructorDashboard() {
     calories: 'area'
   });
 
-  // Load saved selection and settings on mount
+  // Load saved settings on mount
   useEffect(() => {
     const loadData = async () => {
       try {
-        const savedSelection = await AsyncStorage.getItem('instructor_selected_cadets');
-        if (savedSelection) {
-          setSelectedIds(new Set(JSON.parse(savedSelection)));
-        }
-        
         const savedConfig = await AsyncStorage.getItem('instructor_chart_config');
         if (savedConfig) {
           setChartConfig(JSON.parse(savedConfig));
@@ -64,18 +68,6 @@ export default function InstructorDashboard() {
     };
     loadData();
   }, []);
-
-  // Save selection whenever it changes
-  useEffect(() => {
-    const saveSelection = async () => {
-      try {
-        await AsyncStorage.setItem('instructor_selected_cadets', JSON.stringify(Array.from(selectedIds)));
-      } catch (e) {
-        console.error('Failed to save selection', e);
-      }
-    };
-    saveSelection();
-  }, [selectedIds]);
 
   // Save chart config whenever it changes
   useEffect(() => {
@@ -89,7 +81,7 @@ export default function InstructorDashboard() {
     saveConfig();
   }, [chartConfig]);
 
-  const fetchStudentsData = useCallback(async (days = daysToFetch) => {
+  const fetchStudentsData = useCallback(async (range = dateRange) => {
     try {
       // 1. Fetch all users (In a real app, you might filter by class/instructor)
       const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -107,13 +99,17 @@ export default function InstructorDashboard() {
           
           let lastActive = 'N/A';
           
-          const today = new Date();
-          const datesToCheck = [];
-          // Fetch X days for the charts
-          for (let i = 0; i < days; i++) {
-            const d = new Date(today);
-            d.setDate(d.getDate() - i);
-            datesToCheck.push(d.toISOString().split('T')[0]);
+          const datesToCheck: string[] = [];
+          const current = new Date(range.start);
+          const end = new Date(range.end);
+          
+          // Normalize to start of day
+          current.setHours(0,0,0,0);
+          end.setHours(23,59,59,999);
+
+          while (current <= end) {
+            datesToCheck.push(current.toISOString().split('T')[0]);
+            current.setDate(current.getDate() + 1);
           }
 
           const exercisesDocs = await Promise.all(datesToCheck.map(date => 
@@ -122,7 +118,7 @@ export default function InstructorDashboard() {
 
           exercisesDocs.forEach((docSnap) => {
             if (docSnap.exists()) {
-              if (lastActive === 'N/A') lastActive = docSnap.id;
+              lastActive = docSnap.id; // Since we iterate chronologically, the last one is the latest
               const data = docSnap.data();
               
               if (data.exercises && Array.isArray(data.exercises)) {
@@ -158,14 +154,10 @@ export default function InstructorDashboard() {
             sleepHistory.push(0);
           });
 
-          // Reverse to get chronological order (Oldest -> Newest)
-          hrHistory.reverse();
-          distanceHistory.reverse();
-          caloriesHistory.reverse();
-          sleepHistory.reverse();
+          // Data is already chronological (Oldest -> Newest)
           
           // Generate labels (MM/DD)
-          const labels = datesToCheck.reverse().map(dateStr => {
+          const labels = datesToCheck.map(dateStr => {
             const [y, m, d] = dateStr.split('-');
             return `${parseInt(m)}/${parseInt(d)}`;
           });
@@ -222,27 +214,17 @@ export default function InstructorDashboard() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [dateRange]);
 
   useEffect(() => {
     if (isInstructor) {
-      fetchStudentsData(daysToFetch);
+      fetchStudentsData(dateRange);
     }
-  }, [isInstructor, fetchStudentsData, daysToFetch]);
+  }, [isInstructor, fetchStudentsData, dateRange]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchStudentsData(daysToFetch);
-  };
-
-  const toggleSelection = (id: string) => {
-    const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedIds(newSelected);
+    fetchStudentsData(dateRange);
   };
 
   const filteredStudents = students.filter(s => {
@@ -255,7 +237,42 @@ export default function InstructorDashboard() {
 
   // Main view shows ONLY selected students (or all if none selected? No, user wants to choose)
   // If no selection, show empty state prompting to select.
-  const displayedStudents = students.filter(s => selectedIds.has(s.id));
+  const displayedStudents = students.filter(s => selectedUserIds.includes(s.id));
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setShowDatePicker(false);
+      return;
+    }
+    
+    const currentDate = selectedDate || (datePickerMode === 'start' ? dateRange.start : dateRange.end);
+    
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (datePickerMode === 'start') {
+        setDateRange(prev => ({ ...prev, start: currentDate, type: 'custom' }));
+        // Small delay to allow the first picker to close completely
+        setTimeout(() => {
+          setDatePickerMode('end');
+          setShowDatePicker(true);
+        }, 100);
+      } else {
+        setDateRange(prev => ({ ...prev, end: currentDate, type: 'custom' }));
+      }
+    } else {
+      // For iOS, we might want to handle this differently, but for now:
+      setShowDatePicker(false); // Close on selection for simplicity
+      if (datePickerMode === 'start') {
+        setDateRange(prev => ({ ...prev, start: currentDate, type: 'custom' }));
+        setTimeout(() => {
+          setDatePickerMode('end');
+          setShowDatePicker(true);
+        }, 500);
+      } else {
+        setDateRange(prev => ({ ...prev, end: currentDate, type: 'custom' }));
+      }
+    }
+  };
 
   if (instructorLoading || loading) {
     return (
@@ -275,11 +292,50 @@ export default function InstructorDashboard() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Text style={styles.title}>Instructor Dashboard</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>Instructor Dashboard</Text>
+          </View>
+        </View>
+        
+        <Text style={styles.subtitle}>{students.length} Cadets Enrolled</Text>
+        
+        {/* Date Range Selector */}
+        <View style={styles.filterContainer}>
+          <View style={{flexDirection: 'row', alignItems: 'center', flex: 1}}>
+            <Text style={styles.filterLabel}>Range:</Text>
+            <View style={styles.rangeButtons}>
+              {[7, 14, 30].map((days) => (
+                <TouchableOpacity 
+                  key={days} 
+                  style={[styles.rangeButton, dateRange.type === `${days}d` && styles.rangeButtonActive]}
+                  onPress={() => setDateRange({
+                    start: new Date(new Date().setDate(new Date().getDate() - (days - 1))),
+                    end: new Date(),
+                    type: `${days}d` as any
+                  })}
+                >
+                  <Text style={[styles.rangeButtonText, dateRange.type === `${days}d` && styles.rangeButtonTextActive]}>
+                    {days}d
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity 
+                style={[styles.rangeButton, dateRange.type === 'custom' && styles.rangeButtonActive]}
+                onPress={() => {
+                  console.log('Opening date picker');
+                  setDatePickerMode('start');
+                  setShowDatePicker(true);
+                }}
+              >
+                <Ionicons name="calendar" size={16} color={dateRange.type === 'custom' ? '#FFF' : '#666'} />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <TouchableOpacity 
               style={styles.iconButton}
               onPress={() => setSettingsVisible(true)}
@@ -292,26 +348,6 @@ export default function InstructorDashboard() {
             >
               <Text style={styles.selectButtonText}>Manage Cadets</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-        
-        <Text style={styles.subtitle}>{students.length} Cadets Enrolled</Text>
-        
-        {/* Date Range Selector */}
-        <View style={styles.filterContainer}>
-          <Text style={styles.filterLabel}>Range:</Text>
-          <View style={styles.rangeButtons}>
-            {[7, 14, 30].map((days) => (
-              <TouchableOpacity 
-                key={days} 
-                style={[styles.rangeButton, daysToFetch === days && styles.rangeButtonActive]}
-                onPress={() => setDaysToFetch(days as 7 | 14 | 30)}
-              >
-                <Text style={[styles.rangeButtonText, daysToFetch === days && styles.rangeButtonTextActive]}>
-                  {days}d
-                </Text>
-              </TouchableOpacity>
-            ))}
           </View>
         </View>
 
@@ -376,10 +412,10 @@ export default function InstructorDashboard() {
               renderItem={({ item }) => (
                 <TouchableOpacity 
                   style={styles.modalItem} 
-                  onPress={() => toggleSelection(item.id)}
+                  onPress={() => toggleUser(item.id)}
                 >
-                  <View style={[styles.checkbox, selectedIds.has(item.id) && styles.checkboxSelected]}>
-                    {selectedIds.has(item.id) && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                  <View style={[styles.checkbox, selectedUserIds.includes(item.id) && styles.checkboxSelected]}>
+                    {selectedUserIds.includes(item.id) && <Ionicons name="checkmark" size={16} color="#FFF" />}
                   </View>
                   <Text style={styles.modalItemText}>{item.displayName}</Text>
                 </TouchableOpacity>
@@ -439,7 +475,82 @@ export default function InstructorDashboard() {
           </View>
         </SafeAreaView>
       </Modal>
-    </View>
+
+      {/* Web Date Picker Modal */}
+      {Platform.OS === 'web' && showDatePicker && (
+        <Modal
+          transparent={true}
+          animationType="fade"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.webModalOverlay}>
+            <View style={styles.webModalContent}>
+              <Text style={styles.modalTitle}>Select Date Range</Text>
+              
+              <View style={styles.webDateRow}>
+                <Text style={styles.webDateLabel}>Start:</Text>
+                {React.createElement('input', {
+                  type: 'date',
+                  value: (dateRange.start instanceof Date ? dateRange.start : new Date()).toISOString().split('T')[0],
+                  onChange: (e: any) => {
+                    const date = new Date(e.target.value);
+                    if (!isNaN(date.getTime())) {
+                      setDateRange(prev => ({ ...prev, start: date, type: 'custom' }));
+                    }
+                  },
+                  style: {
+                    padding: 8,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    fontSize: 16,
+                  }
+                })}
+              </View>
+
+              <View style={styles.webDateRow}>
+                <Text style={styles.webDateLabel}>End:</Text>
+                {React.createElement('input', {
+                  type: 'date',
+                  value: (dateRange.end instanceof Date ? dateRange.end : new Date()).toISOString().split('T')[0],
+                  onChange: (e: any) => {
+                    const date = new Date(e.target.value);
+                    if (!isNaN(date.getTime())) {
+                      setDateRange(prev => ({ ...prev, end: date, type: 'custom' }));
+                    }
+                  },
+                  style: {
+                    padding: 8,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    fontSize: 16,
+                  }
+                })}
+              </View>
+
+              <TouchableOpacity 
+                style={styles.webApplyButton}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.webApplyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Native Date Picker */}
+      {Platform.OS !== 'web' && showDatePicker && (
+        <DateTimePicker
+          value={datePickerMode === 'start' ? (dateRange.start instanceof Date ? dateRange.start : new Date()) : (dateRange.end instanceof Date ? dateRange.end : new Date())}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -686,5 +797,46 @@ const styles = StyleSheet.create({
   typeOptionTextSelected: {
     color: '#FF6B35',
     fontWeight: 'bold',
+  },
+  webModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  webModalContent: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
+    width: '80%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  webDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  webDateLabel: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  webApplyButton: {
+    backgroundColor: '#FF6B35',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  webApplyButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });

@@ -8,6 +8,7 @@ import {
   Platform,
   Modal,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -178,7 +179,7 @@ export default function AllExercisesScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'All Exercises' }} />
       
       {/* Filters Header */}
@@ -329,7 +330,7 @@ export default function AllExercisesScreen() {
         </Pressable>
       </Modal>
 
-    </View>
+    </SafeAreaView>
   );
 }
 

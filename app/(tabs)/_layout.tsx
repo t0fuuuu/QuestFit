@@ -175,6 +175,8 @@ export default function TabLayout() {
         },
         headerTitleStyle: {
           textAlign: 'center',
+          color: '#000000',
+          fontWeight: 'bold',
         },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>

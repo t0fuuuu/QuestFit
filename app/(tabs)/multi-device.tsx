@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useMultiDeviceWorkout } from '@/src/hooks/useMultiDeviceWorkout';
 import Colors from '@/constants/Colors';
@@ -217,6 +218,7 @@ export default function MultiDeviceLiveWorkoutScreen() {
     : null;
 
   return (
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['left', 'right', 'bottom']}>
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Instructor's Dashboard</Text>
@@ -322,5 +324,6 @@ export default function MultiDeviceLiveWorkoutScreen() {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }

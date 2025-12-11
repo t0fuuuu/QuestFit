@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -280,7 +281,7 @@ export default function UserDetailScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
@@ -710,7 +711,7 @@ export default function UserDetailScreen() {
           </View>
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

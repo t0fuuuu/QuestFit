@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, TextInput, Pressable, Modal, StyleSheet, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { CreatureDetailsModal, CreatureCardGrid } from '@/components/game/CreatureCard';
 import { twoStyles as styles } from '@/src/styles';
@@ -55,7 +56,7 @@ export default function CreaturesScreen() {
   const activeFiltersCount = (statusFilter !== 'all' ? 1 : 0) + (rarityFilter !== 'all' ? 1 : 0) + (sportFilter !== 'all' ? 1 : 0);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <View style={styles.header}>
         <Text style={styles.title}>Creatures</Text>
         <Text style={styles.subtitle}>
@@ -98,6 +99,7 @@ export default function CreaturesScreen() {
       </View>
 
       <ScrollView 
+        style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         showsHorizontalScrollIndicator={false}
       >
@@ -235,7 +237,7 @@ export default function CreaturesScreen() {
           setShowUnlockModal(false);
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -245,6 +247,7 @@ const localStyles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
     gap: 10,
+    backgroundColor: 'transparent',
   },
   searchBar: {
     flex: 1,
@@ -293,6 +296,7 @@ const localStyles = StyleSheet.create({
   emptyState: {
     padding: 40,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   emptyStateText: {
     fontSize: 16,
@@ -320,6 +324,7 @@ const localStyles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    backgroundColor: 'transparent',
   },
   modalTitle: {
     fontSize: 20,
@@ -339,6 +344,7 @@ const localStyles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
     marginBottom: 16,
+    backgroundColor: 'transparent',
   },
   chip: {
     paddingHorizontal: 16,
@@ -365,6 +371,7 @@ const localStyles = StyleSheet.create({
     gap: 12,
     marginTop: 20,
     paddingBottom: 20,
+    backgroundColor: 'transparent',
   },
   resetButton: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
   RefreshControl,
   TouchableOpacity
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/src/hooks/useAuth';
@@ -191,7 +192,7 @@ export default function MeScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -307,7 +308,7 @@ export default function MeScreen() {
           />
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 40, backgroundColor: 'transparent' }} />
       </ScrollView>
 
       <Modal
@@ -328,7 +329,7 @@ export default function MeScreen() {
         onConsent={() => setShowConsentModal(false)}
         readOnly={true}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -488,6 +489,7 @@ const styles = StyleSheet.create({
     width: '25%',
     alignItems: 'center',
     marginBottom: 8,
+    backgroundColor: 'transparent',
   },
   attributeValue: {
     fontSize: 16,
@@ -525,6 +527,7 @@ const styles = StyleSheet.create({
   },
   historyInfo: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   historyType: {
     fontSize: 16,
@@ -537,6 +540,7 @@ const styles = StyleSheet.create({
   },
   historyStats: {
     alignItems: 'flex-end',
+    backgroundColor: 'transparent',
   },
   historyValue: {
     fontSize: 14,

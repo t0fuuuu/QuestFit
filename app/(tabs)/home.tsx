@@ -9,6 +9,7 @@ import {
   Modal,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
 import { useAuth } from '@/src/hooks/useAuth';
@@ -140,6 +141,7 @@ export default function HomeScreen() {
   const creatureCount = profile?.capturedCreatures?.length || 0;
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: ModernColors.background }} edges={['left', 'right', 'bottom']}>
     <ScrollView 
       style={styles.scrollView} 
       contentContainerStyle={styles.contentContainer}
@@ -346,6 +348,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
