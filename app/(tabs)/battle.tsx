@@ -3,52 +3,9 @@ import { battleStyles as styles } from '@/src/styles';
 import creatureService from '@/src/services/creatureService';
 import { Image } from 'expo-image';
 import React, { useEffect, useRef } from 'react';
-import { Animated, ImageSourcePropType, Easing } from 'react-native';
+import { Animated, Easing } from 'react-native';
 import { Creature } from '@/src/types/polar';
-
-type IconProps = {
-  creature: Creature;
-};
-
-function IdleIcon ({ creature }: IconProps) {
-  const translateY = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(translateY, {
-          toValue: -5,
-          duration: 25,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.delay(creature.stats.speed * 5),
-        Animated.timing(translateY, {
-          toValue: 0,
-          duration: 25,
-          easing: Easing.linear,
-          useNativeDriver: true,
-        }),
-        Animated.delay(creature.stats.speed * 5)
-      ])
-    ).start();
-  }, []);
-
-  return (
-    <Animated.Image
-      source={getCreatureImage(creature.id)}
-      style={[
-        styles.creatureIcon,
-        {
-        width: 50,
-        height: 50,
-        transform: [{ translateY }],
-        }
-      ]}
-      resizeMode="contain"
-    />
-  );
-}
+import { getRarityColor, getSportColor } from '@/src/styles';
 
 const creatureImages = require.context(
   '../../assets/images/creatures',
@@ -60,6 +17,51 @@ function getCreatureImage(id: string) {
   return creatureImages(`./creature_icon_${id}.png`);
 }
 
+type IconProps = {
+  creature: Creature;
+};
+
+function IdleIcon ({ creature }: IconProps) {
+  const translateY = useRef(new Animated.Value(0)).current;
+  const delay = 800/(1+Math.exp(0.03*(creature.stats.speed-50)))+100;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(translateY, {
+          toValue: -10,
+          duration: 0,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.delay(delay),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 0,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        }),
+        Animated.delay(delay)
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <Animated.Image
+      source={getCreatureImage(creature.id)}
+      style={[
+        styles.creatureIcon,
+        {
+        width: 150,
+        height: 150,
+        transform: [ {translateY} ],
+        }
+      ]}
+      resizeMode="contain"
+    />
+  );
+}
+
 export default function BattleScreen() {
 
   const user = 'PlaceholderUser'; // Placeholder for user
@@ -68,6 +70,9 @@ export default function BattleScreen() {
   const allCreatures = creatureService.getAllCreatures(); // This is just for the placeholders lol
   const userCreatures = [allCreatures[0], allCreatures[3], allCreatures[5]]; // Placeholder for user's creatures
   const opponentCreatures = [allCreatures[6], allCreatures[21], allCreatures[22]]; // Placeholder for opponent's creatures
+
+  const userSelectedCreature = 0; // Placeholder user selected index
+  const opponentSelectedCreature = 2; // Placeholder opponent selected index
 
   return (
     <View style={styles.container}>
@@ -117,10 +122,61 @@ export default function BattleScreen() {
           </View>
         </View>
       </View>
-      <View> 
-        <IdleIcon 
-            creature={userCreatures[0]}
-        />
+      <View style={styles.battleArea}> 
+        <View style={[styles.creature, {transform: [ {scaleX: -1} ]}]}>
+          <View style={[styles.creatureStats, {transform: [ {scaleX: -1} ], marginTop: 12}]}>
+            <Text style={styles.creatureName}>
+              {userCreatures[userSelectedCreature].name}  <Text style={styles.creatureStat}>
+                ⚔️ {userCreatures[userSelectedCreature].stats.power} ⚡ {userCreatures[userSelectedCreature].stats.speed} 🛡️ {userCreatures[userSelectedCreature].stats.endurance}
+              </Text>
+            </Text>
+          </View>
+          <View style={[styles.creatureStats, {transform: [ {scaleX: -1} ], marginTop: 4}]}>
+            <Text style={[styles.creatureRarity, { color: getRarityColor(userCreatures[userSelectedCreature].rarity) }]}>
+              {userCreatures[userSelectedCreature].rarity.toUpperCase()}
+            </Text>
+            <Text style={[styles.creatureSportBadge, { 
+              backgroundColor: getSportColor(userCreatures[userSelectedCreature].sport)[0],
+             color: getSportColor(userCreatures[userSelectedCreature].sport)[1] }]}>
+              {userCreatures[userSelectedCreature].sport}
+            </Text>
+          </View>
+          <View style={styles.healthBarContainer}>
+            <View style={styles.emptyHealthBar}>
+              <View style={styles.healthBar}/>
+            </View>
+          </View>
+          <IdleIcon 
+              creature={userCreatures[userSelectedCreature]}
+          /> 
+        </View>
+        <View style={styles.creature}>
+          <View style={[styles.creatureStats, {justifyContent: 'flex-end', marginTop: 12}]}>
+            <Text style={styles.creatureName}>
+              {opponentCreatures[opponentSelectedCreature].name}  <Text style={styles.creatureStat}>
+                ⚔️ {opponentCreatures[opponentSelectedCreature].stats.power} ⚡ {opponentCreatures[opponentSelectedCreature].stats.speed} 🛡️ {opponentCreatures[opponentSelectedCreature].stats.endurance}
+              </Text>
+            </Text>
+          </View>
+          <View style={[styles.creatureStats, {justifyContent: 'flex-end', marginTop: 4}]}>
+            <Text style={[styles.creatureRarity, { color: getRarityColor(opponentCreatures[opponentSelectedCreature].rarity) }]}>
+              {opponentCreatures[opponentSelectedCreature].rarity.toUpperCase()}
+            </Text>
+            <Text style={[styles.creatureSportBadge, { 
+              backgroundColor: getSportColor(opponentCreatures[opponentSelectedCreature].sport)[0],
+             color: getSportColor(opponentCreatures[opponentSelectedCreature].sport)[1] }]}>
+              {opponentCreatures[opponentSelectedCreature].sport}
+            </Text>
+          </View>
+          <View style={styles.healthBarContainer}>
+            <View style={styles.emptyHealthBar}>
+              <View style={styles.healthBar}/>
+            </View>
+          </View>
+          <IdleIcon 
+              creature={opponentCreatures[2]}
+          /> 
+        </View>
       </View>
     </View>
   );

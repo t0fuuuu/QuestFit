@@ -153,27 +153,72 @@ export const battleStyles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    color: black,
-    marginBottom: 8,
+  battleArea: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  subtitle: {
+  creature: {
+    width: '50%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  healthBarContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '100%',
+    height: 20,
+    marginTop: 4,
+    marginRight: 64,
+    marginLeft: 32,
+  },
+  emptyHealthBar: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    borderRadius: 4,
+    backgroundColor: '#6B7280',
+    height: '100%',
+    width: '80%',
+    maxWidth: 300,
+    marginTop: 4,
+  },
+  healthBar: {
+    borderRadius: 4,
+    backgroundColor: '#10B981',
+    height: '100%',
+    width: '75%',
+  },
+  creatureStats: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    backgroundColor: 'transparent',
+    marginRight: 64,
+    marginLeft: 32,
+  },
+  creatureName: {
     fontSize: 16,
-    textAlign: 'center',
-    color: '#6B7280',
-    marginBottom: 8,
+    fontWeight: 'bold',
+    color: black,
+    marginBottom: 4,
   },
-  stats: {
-    fontSize: 14,
-    textAlign: 'center',
-    color: '#3B82F6',
+  creatureRarity: {
+    fontSize: 11,
     fontWeight: '600',
+    textTransform: 'uppercase',
   },
-  listContainer: {
-    padding: 8,
+  creatureSportBadge: {
+    fontSize: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: -4,
+    marginLeft: 8,
+  },
+  creatureStat: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
   },
 });
 
