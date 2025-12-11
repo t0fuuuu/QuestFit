@@ -3,7 +3,7 @@ import { Pressable } from 'react-native';
 import { Text, View } from '@/components/Themed';
 import { liveStyles as styles } from '@/src/styles';
 import { DeviceHeartRateCard } from '@/components/fitness/DeviceHeartRateCard';
-import { ConnectedDeviceInfo } from '@/src/services/bluetoothService';
+import { ConnectedDeviceInfo } from '@/src/services/bluetoothTypes';
 
 interface ConnectedDevicesListProps {
   connectedDevices: ConnectedDeviceInfo[];
@@ -52,15 +52,29 @@ export const ConnectedDevicesList: React.FC<ConnectedDevicesListProps> = ({
         )}
       </View>
       
-      {connectedDevices.map((deviceInfo) => (
-        <DeviceHeartRateCard
-          key={deviceInfo.device.id}
-          deviceInfo={deviceInfo}
-          heartRate={deviceHeartRates.get(deviceInfo.device.id) || null}
-          onDisconnect={() => onDisconnect(deviceInfo.device.id, deviceInfo.device.name || undefined)}
-          compact={connectedDevices.length > 2}
-        />
-      ))}
+      {connectedDevices.map((deviceInfo) => {
+        // Try to find owner by device ID or by extracted ID from name
+        let ownerName = deviceOwners[deviceInfo.device.id];
+        
+        if (!ownerName && deviceInfo.device.name) {
+          const parts = deviceInfo.device.name.split(' ');
+          const lastPart = parts[parts.length - 1];
+          if (/^[0-9A-F]{8}$/i.test(lastPart)) {
+            ownerName = deviceOwners[lastPart];
+          }
+        }
+
+        return (
+          <DeviceHeartRateCard
+            key={deviceInfo.device.id}
+            deviceInfo={deviceInfo}
+            heartRate={deviceHeartRates.get(deviceInfo.device.id) || null}
+            onDisconnect={() => onDisconnect(deviceInfo.device.id, deviceInfo.device.name || undefined)}
+            compact={connectedDevices.length > 2}
+            ownerName={ownerName}
+          />
+        );
+      })}
 
       {/* Aggregate Heart Rate */}
       {connectedDevices.length > 1 && (

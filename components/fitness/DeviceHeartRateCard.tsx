@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
-import { ConnectedDeviceInfo } from '@/src/services/bluetoothService';
+import { ConnectedDeviceInfo } from '@/src/services/bluetoothTypes';
 import Colors from '@/constants/Colors';
 import { deviceHeartRateCardStyles as styles } from '@/src/styles/components/deviceHeartRateCardStyles';
 
@@ -9,6 +9,7 @@ interface DeviceHeartRateCardProps {
   heartRate: number | null;
   onDisconnect: () => void;
   compact?: boolean;
+  ownerName?: string;
 }
 
 export const DeviceHeartRateCard: React.FC<DeviceHeartRateCardProps> = ({
@@ -16,6 +17,7 @@ export const DeviceHeartRateCard: React.FC<DeviceHeartRateCardProps> = ({
   heartRate,
   onDisconnect,
   compact = false,
+  ownerName,
 }) => {
   const getHeartRateColor = (hr: number | null): string => {
     if (!hr) return '#9CA3AF'; // Gray
@@ -31,7 +33,7 @@ export const DeviceHeartRateCard: React.FC<DeviceHeartRateCardProps> = ({
       <View style={styles.compactCard}>
         <View style={styles.compactHeader}>
           <Text style={styles.compactDeviceName} numberOfLines={1}>
-            {deviceInfo.device.name || 'Unknown Device'}
+            {ownerName || deviceInfo.device.name || 'Unknown Device'}
           </Text>
           <Pressable onPress={onDisconnect} style={styles.compactDisconnectButton}>
             <Text style={styles.compactDisconnectText}>✕</Text>
@@ -53,8 +55,12 @@ export const DeviceHeartRateCard: React.FC<DeviceHeartRateCardProps> = ({
         <View style={styles.headerLeft}>
           <Text style={styles.deviceIcon}>⌚</Text>
           <View>
-            <Text style={styles.deviceName}>{deviceInfo.device.name || 'Unknown Device'}</Text>
-            <Text style={styles.deviceId}>{deviceInfo.device.id.substring(0, 8)}...</Text>
+            <Text style={styles.deviceName}>
+              {ownerName || deviceInfo.device.name || 'Unknown Device'}
+            </Text>
+            <Text style={styles.deviceId}>
+              {ownerName ? deviceInfo.device.name : deviceInfo.device.id.substring(0, 8) + '...'}
+            </Text>
           </View>
         </View>
         <Pressable onPress={onDisconnect} style={styles.disconnectButton}>
