@@ -1,5 +1,27 @@
 import { StyleSheet } from 'react-native';
 import { white, black } from '@/constants/Colors';
+import { Creature } from './types/polar';
+
+export const getRarityColor = (type: Creature['rarity']) => {
+  switch (type) {
+  case 'rare': return '#43C073';
+  case 'epic': return '#8B5CF6';
+  case 'legendary': return '#F59E0B';
+  default: return '#3BA8F6';
+  }
+};
+
+export const getSportColor = (type: Creature['sport']) => {
+  switch (type) {
+    case 'RUNNING': return ['#AE0000', '#FFFFFF'];
+    case 'SWIMMING': return ['#53E8f6', '#1F2937'];
+    case 'HIKING': return ['#13780E', '#FFFFFF'];
+    case 'FITNESS': return ['#FB008A', '#FFFFFF'];
+    case 'CYCLING': return ['#FFF42A', '#1F2937'];
+    case 'CIRCUIT': return ['#BB00FF', '#FFFFFF'];
+    default: return ['#676767', '#FFFFFF'];
+  }
+};
 
 // Home/Index Tab Styles
 export const indexStyles = StyleSheet.create({
@@ -67,6 +89,69 @@ export const twoStyles = StyleSheet.create({
     backgroundColor: white,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: black,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  stats: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#3B82F6',
+    fontWeight: '600',
+  },
+  listContainer: {
+    padding: 8,
+  },
+});
+
+// Battle Tab Styles
+export const battleStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
+  username: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginLeft: 4,
+    marginRight: 4,
+    marginBottom: -8,
+  },
+  header: {
+    padding: 8,
+    paddingLeft: 16,
+    paddingRight: 16,
+    backgroundColor: white,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  creatureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  creatureIcon: { 
+    width: 60, 
+    height: 60, 
+    resizeMode: 'contain', 
+    imageRendering: 'pixelated' } as any,
+  creatureIconContainer: {
+    backgroundColor: '#FFFFFF',
+    margin: 2,
+    borderRadius: 12,
+    borderWidth: 2
   },
   title: {
     fontSize: 24,

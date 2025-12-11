@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, Dimensions, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Creature } from '../../src/types/polar';
-import { creatureCardStyles as styles, getRarityColor, getSportColor } from '@/src/styles/components/creatureCardStyles';
+import { creatureCardStyles as styles} from '@/src/styles/components/creatureCardStyles';
+import { getRarityColor, getSportColor } from '@/src/styles';
 
 const creatureImages = require.context(
   '../../assets/images/creatures',
