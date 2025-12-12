@@ -284,6 +284,17 @@ export default function MeScreen() {
           )}
         </View>
 
+        {/* History */}
+        <Text style={styles.sectionTitle}>History</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="calendar"
+            label="View Daily Activity, Exercise & Sleep"
+            onPress={() => router.push('/history')}
+            color={ModernColors.primary}
+          />
+        </View>
+
         {/* Settings & Actions */}
         <Text style={styles.sectionTitle}>Settings</Text>
         <View style={styles.card}>
@@ -375,10 +386,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: Platform.OS === 'ios' ? 20 : 20,
   },
+  contentMaxWidth: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
+  },
   headerCard: {
     alignItems: 'center',
     marginBottom: 30,
     backgroundColor: 'transparent',
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   avatarContainer: {
     width: 80,
@@ -428,7 +447,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: ModernColors.text,
     marginBottom: 12,
-    marginLeft: 4,
+    textAlign: 'center',
+    marginLeft: 0,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   statsGrid: {
     flexDirection: 'row',
@@ -436,9 +459,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 24,
     backgroundColor: 'transparent',
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   statCard: {
-    width: (width - 56) / 2,
+    flexBasis: '48%',
+    flexGrow: 0,
+    flexShrink: 0,
     backgroundColor: ModernColors.card,
     borderRadius: 16,
     padding: 16,
@@ -478,6 +506,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   attributesGrid: {
     flexDirection: 'row',

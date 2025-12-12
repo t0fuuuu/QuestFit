@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,6 +15,7 @@ import { Text } from '@/components/Themed';
 import { useLocalSearchParams, router } from 'expo-router';
 import { db } from '@/src/services/firebase';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Helper function to convert ISO8601 duration to readable format
 function formatDuration(iso8601Duration: string): string {
@@ -59,13 +60,64 @@ interface AISummary {
   "[short]recommendations": string;
 }
 
+type PresetRange = '7d' | '14d' | '30d';
+type DateRange = {
+  type: PresetRange | 'custom';
+  start: Date;
+  end: Date;
+};
+
+type RangeDailyItem = {
+  date: string; // YYYY-MM-DD
+  activity?: any;
+  exercises?: any;
+  sleep?: any;
+  steps?: number;
+  activityCalories?: number;
+  activityDistance?: number;
+  exerciseCount?: number;
+  exerciseCalories?: number;
+  exerciseDistance?: number;
+  sleepScore?: number;
+  sleepStart?: string;
+  sleepEnd?: string;
+  sleepDurationMinutes?: number;
+};
+
 export default function UserDetailScreen() {
   const { userId, date } = useLocalSearchParams<{ userId: string, date?: string }>();
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [displayName, setDisplayName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<{time: string, hr: number} | null>(null);
-  const [selectedDate, setSelectedDate] = useState(date ? new Date(date) : new Date());
+
+  const initialEnd = useMemo(() => {
+    const parsed = date ? new Date(date) : new Date();
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  }, [date]);
+
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    const end = new Date(initialEnd);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    return { type: '7d', start, end };
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerMode, setDatePickerMode] = useState<'start' | 'end'>('start');
+
+  const [rangeItems, setRangeItems] = useState<RangeDailyItem[]>([]);
+  const [loadingRange, setLoadingRange] = useState(false);
+
+  const selectedDate = useMemo(() => {
+    // Use the end of the range as the “selected day” for single-day sections (AI, cardio, etc.)
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+    const endMs = Math.max(start.getTime(), end.getTime());
+    return new Date(endMs);
+  }, [dateRange]);
   
   // AI State
   const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
@@ -78,12 +130,169 @@ export default function UserDetailScreen() {
     }
   }, [userId, selectedDate]);
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!userId) return;
+      try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          const name = typeof data.displayName === 'string' ? data.displayName.trim() : '';
+          setDisplayName(name || userId);
+        } else {
+          setDisplayName(userId);
+        }
+      } catch (e) {
+        console.warn('Failed to load user profile', e);
+        setDisplayName(userId);
+      }
+    };
+    loadProfile();
+  }, [userId]);
+
   const formatDate = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
+
+  const toIsoDateString = (d: Date) => d.toISOString().split('T')[0];
+
+  const dateStrings = useMemo(() => {
+    const dates: string[] = [];
+
+    const maxDays = 90;
+    const msPerDay = 24 * 60 * 60 * 1000;
+
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    start.setHours(0, 0, 0, 0);
+    end.setHours(0, 0, 0, 0);
+
+    if (dateRange.type !== 'custom') {
+      const days = dateRange.type === '7d' ? 7 : dateRange.type === '14d' ? 14 : 30;
+      const endDate = new Date(end);
+      for (let i = 0; i < days; i++) {
+        const d = new Date(endDate);
+        d.setDate(d.getDate() - i);
+        dates.push(toIsoDateString(d));
+      }
+      return dates;
+    }
+
+    const startMs = Math.min(start.getTime(), end.getTime());
+    const endMs = Math.max(start.getTime(), end.getTime());
+    const startDate = new Date(startMs);
+    const endDate = new Date(endMs);
+    const dayCount = Math.floor((endDate.getTime() - startDate.getTime()) / msPerDay) + 1;
+    const boundedCount = Math.min(dayCount, maxDays);
+
+    for (let i = 0; i < boundedCount; i++) {
+      const d = new Date(endDate);
+      d.setDate(d.getDate() - i);
+      dates.push(toIsoDateString(d));
+    }
+
+    return dates;
+  }, [dateRange]);
+
+  const onDateChange = (_event: any, picked?: Date) => {
+    if (Platform.OS !== 'ios') {
+      setShowDatePicker(false);
+    }
+    if (!picked || isNaN(picked.getTime())) return;
+    setDateRange((prev) => ({
+      ...prev,
+      type: 'custom',
+      [datePickerMode]: picked,
+    }));
+  };
+
+  const loadRange = useCallback(async () => {
+    if (!userId) return;
+    setLoadingRange(true);
+    try {
+      const results = await Promise.all(
+        dateStrings.map(async (ds) => {
+          const [activitySnap, exercisesSnap, sleepSnap] = await Promise.all([
+            getDoc(doc(db, `users/${userId}/polarData/activities/all/${ds}`)),
+            getDoc(doc(db, `users/${userId}/polarData/exercises/all/${ds}`)),
+            getDoc(doc(db, `users/${userId}/polarData/sleep/all/${ds}`)),
+          ]);
+
+          const activity = activitySnap.exists() ? activitySnap.data() : undefined;
+          const exercises = exercisesSnap.exists() ? exercisesSnap.data() : undefined;
+          const sleep = sleepSnap.exists() ? sleepSnap.data() : undefined;
+
+          const steps = typeof activity?.steps === 'number' ? activity.steps : undefined;
+          const activityCalories =
+            typeof activity?.calories === 'number'
+              ? activity.calories
+              : typeof activity?.active_calories === 'number'
+                ? activity.active_calories
+                : undefined;
+          const activityDistance =
+            typeof activity?.distance_from_steps === 'number'
+              ? activity.distance_from_steps
+              : typeof activity?.distance === 'number'
+                ? activity.distance
+                : undefined;
+
+          let exerciseCount: number | undefined;
+          let exerciseCalories: number | undefined;
+          let exerciseDistance: number | undefined;
+          if (exercises?.exercises && Array.isArray(exercises.exercises)) {
+            exerciseCount = exercises.exercises.length;
+            let totalCals = 0;
+            let totalDist = 0;
+            exercises.exercises.forEach((ex: any) => {
+              if (typeof ex?.calories === 'number') totalCals += ex.calories;
+              if (typeof ex?.distance === 'number') totalDist += ex.distance;
+            });
+            exerciseCalories = Math.round(totalCals);
+            exerciseDistance = Math.round(totalDist);
+          } else if (typeof exercises?.count === 'number') {
+            exerciseCount = exercises.count;
+          }
+
+          const sleepScore = typeof sleep?.sleep_score === 'number' ? sleep.sleep_score : undefined;
+          const sleepStart = typeof sleep?.sleep_start_time === 'string' ? sleep.sleep_start_time : undefined;
+          const sleepEnd = typeof sleep?.sleep_end_time === 'string' ? sleep.sleep_end_time : undefined;
+          let sleepDurationMinutes: number | undefined;
+          if (sleepStart && sleepEnd) {
+            const start = new Date(sleepStart);
+            const end = new Date(sleepEnd);
+            const ms = end.getTime() - start.getTime();
+            if (Number.isFinite(ms) && ms > 0) sleepDurationMinutes = Math.round(ms / 60000);
+          }
+
+          return {
+            date: ds,
+            activity,
+            exercises,
+            sleep,
+            steps,
+            activityCalories,
+            activityDistance,
+            exerciseCount,
+            exerciseCalories,
+            exerciseDistance,
+            sleepScore,
+            sleepStart,
+            sleepEnd,
+            sleepDurationMinutes,
+          } satisfies RangeDailyItem;
+        })
+      );
+      setRangeItems(results);
+    } catch (e) {
+      console.warn('Failed to load range data', e);
+      setRangeItems([]);
+    } finally {
+      setLoadingRange(false);
+    }
+  }, [dateStrings, userId]);
 
   const checkExistingAISummary = async () => {
     if (!userId) return;
@@ -136,11 +345,10 @@ export default function UserDetailScreen() {
     }
   };
 
-  const changeDate = (days: number) => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + days);
-    setSelectedDate(newDate);
-  };
+  useEffect(() => {
+    if (!userId) return;
+    loadRange();
+  }, [userId, loadRange]);
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getFullYear() === d2.getFullYear() &&
@@ -259,9 +467,66 @@ export default function UserDetailScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadUserStats();
+    await Promise.all([loadUserStats(), checkExistingAISummary(), loadRange()]);
     setRefreshing(false);
   };
+
+  const rangeLabel = useMemo(() => {
+    if (dateRange.type !== 'custom') {
+      return dateRange.type === '7d' ? 'Last 7 days' : dateRange.type === '14d' ? 'Last 14 days' : 'Last 30 days';
+    }
+    const start = new Date(dateRange.start);
+    const end = new Date(dateRange.end);
+    const startMs = Math.min(start.getTime(), end.getTime());
+    const endMs = Math.max(start.getTime(), end.getTime());
+    return `${new Date(startMs).toLocaleDateString()} – ${new Date(endMs).toLocaleDateString()}`;
+  }, [dateRange]);
+
+  const activityAgg = useMemo(() => {
+    let days = 0;
+    let stepsTotal = 0;
+    let caloriesTotal = 0;
+    let distanceTotal = 0;
+    rangeItems.forEach((it) => {
+      const hasAny = typeof it.steps === 'number' || typeof it.activityCalories === 'number' || typeof it.activityDistance === 'number';
+      if (!hasAny) return;
+      days += 1;
+      if (typeof it.steps === 'number') stepsTotal += it.steps;
+      if (typeof it.activityCalories === 'number') caloriesTotal += it.activityCalories;
+      if (typeof it.activityDistance === 'number') distanceTotal += it.activityDistance;
+    });
+    return { days, stepsTotal, caloriesTotal, distanceTotal };
+  }, [rangeItems]);
+
+  const exerciseAgg = useMemo(() => {
+    let days = 0;
+    let workoutTotal = 0;
+    let caloriesTotal = 0;
+    let distanceTotal = 0;
+    rangeItems.forEach((it) => {
+      const hasAny = typeof it.exerciseCount === 'number' || typeof it.exerciseCalories === 'number' || typeof it.exerciseDistance === 'number';
+      if (!hasAny) return;
+      days += 1;
+      if (typeof it.exerciseCount === 'number') workoutTotal += it.exerciseCount;
+      if (typeof it.exerciseCalories === 'number') caloriesTotal += it.exerciseCalories;
+      if (typeof it.exerciseDistance === 'number') distanceTotal += it.exerciseDistance;
+    });
+    return { days, workoutTotal, caloriesTotal, distanceTotal };
+  }, [rangeItems]);
+
+  const sleepAgg = useMemo(() => {
+    let days = 0;
+    let scoreTotal = 0;
+    let durationTotal = 0;
+    rangeItems.forEach((it) => {
+      const hasAny = typeof it.sleepScore === 'number' || typeof it.sleepDurationMinutes === 'number';
+      if (!hasAny) return;
+      days += 1;
+      if (typeof it.sleepScore === 'number') scoreTotal += it.sleepScore;
+      if (typeof it.sleepDurationMinutes === 'number') durationTotal += it.sleepDurationMinutes;
+    });
+    return { days, scoreTotal, durationTotal };
+  }, [rangeItems]);
 
   if (loading) {
     return (
@@ -270,7 +535,8 @@ export default function UserDetailScreen() {
           <Pressable onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backButtonText}>← Back</Text>
           </Pressable>
-          <Text style={styles.headerTitle}>{userId}</Text>
+          <Text style={styles.headerTitle}>{displayName || userId}</Text>
+          <View style={{ width: 80 }} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#FF6B35" />
@@ -286,28 +552,120 @@ export default function UserDetailScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </Pressable>
-        <Text style={styles.headerTitle}>{userId}</Text>
+        <Text style={styles.headerTitle}>{displayName || userId}</Text>
+        <View style={{ width: 80 }} />
       </View>
 
-      <View style={styles.dateSelector}>
-        <TouchableOpacity onPress={() => changeDate(-1)} style={styles.dateButton}>
-          <Text style={styles.dateButtonText}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.dateText}>
-          {selectedDate.toLocaleDateString(undefined, { 
-            weekday: 'short', 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-          })}
-        </Text>
-        <TouchableOpacity 
-          onPress={() => changeDate(1)} 
-          style={[styles.dateButton, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabled]}
-          disabled={isSameDay(selectedDate, new Date())}
-        >
-          <Text style={[styles.dateButtonText, isSameDay(selectedDate, new Date()) && styles.dateButtonDisabledText]}>→</Text>
-        </TouchableOpacity>
+      <View style={styles.controlsCard}>
+        <View style={styles.rangeRow}>
+          <Text style={styles.rangeLabel}>Range:</Text>
+          <View style={styles.rangeButtons}>
+            {([
+              { key: '7d', label: '7d' },
+              { key: '14d', label: '14d' },
+              { key: '30d', label: '30d' },
+            ] as const).map((r) => (
+              <TouchableOpacity
+                key={r.key}
+                style={[styles.rangeButton, dateRange.type === r.key && styles.rangeButtonActive]}
+                onPress={() => {
+                  const end = new Date(dateRange.end);
+                  const start = new Date(end);
+                  const days = r.key === '7d' ? 7 : r.key === '14d' ? 14 : 30;
+                  start.setDate(start.getDate() - (days - 1));
+                  setDateRange({ type: r.key, start, end });
+                }}
+              >
+                <Text style={[styles.rangeButtonText, dateRange.type === r.key && styles.rangeButtonTextActive]}>
+                  {r.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              style={[styles.rangeButton, dateRange.type === 'custom' && styles.rangeButtonActive]}
+              onPress={() => {
+                setDateRange((prev) => ({ ...prev, type: 'custom' }));
+                if (Platform.OS === 'web') return;
+                setShowDatePicker(true);
+              }}
+            >
+              <Text style={[styles.rangeButtonText, dateRange.type === 'custom' && styles.rangeButtonTextActive]}>
+                Custom
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {dateRange.type === 'custom' && (
+          <View style={styles.customRow}>
+            {Platform.OS === 'web' ? (
+              <>
+                <View style={styles.webDateRow}>
+                  <Text style={styles.webDateLabel}>Start:</Text>
+                  {React.createElement('input', {
+                    type: 'date',
+                    value: dateRange.start.toISOString().split('T')[0],
+                    onChange: (e: any) => {
+                      const d = new Date(e.target.value);
+                      if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, start: d, type: 'custom' }));
+                    },
+                    style: {
+                      padding: 8,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      fontSize: 16,
+                    },
+                  })}
+                </View>
+                <View style={styles.webDateRow}>
+                  <Text style={styles.webDateLabel}>End:</Text>
+                  {React.createElement('input', {
+                    type: 'date',
+                    value: dateRange.end.toISOString().split('T')[0],
+                    onChange: (e: any) => {
+                      const d = new Date(e.target.value);
+                      if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, end: d, type: 'custom' }));
+                    },
+                    style: {
+                      padding: 8,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: '#D1D5DB',
+                      fontSize: 16,
+                    },
+                  })}
+                </View>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.customDateButton}
+                  onPress={() => {
+                    setDatePickerMode('start');
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Text style={styles.customDateButtonLabel}>Start</Text>
+                  <Text style={styles.customDateButtonValue}>{dateRange.start.toLocaleDateString()}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.customDateButton}
+                  onPress={() => {
+                    setDatePickerMode('end');
+                    setShowDatePicker(true);
+                  }}
+                >
+                  <Text style={styles.customDateButtonLabel}>End</Text>
+                  <Text style={styles.customDateButtonValue}>{dateRange.end.toLocaleDateString()}</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        )}
+
+        <Text style={styles.rangeSummaryText}>{rangeLabel}</Text>
       </View>
 
       <ScrollView
@@ -319,6 +677,10 @@ export default function UserDetailScreen() {
         {/* AI Insights Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Daily Insights & Recommendations</Text>
+
+          <Text style={styles.rangeHintText}>
+            Insights use the range end date: {selectedDate.toLocaleDateString()}
+          </Text>
           
           {aiSummary ? (
             <View style={styles.card}>
@@ -351,20 +713,20 @@ export default function UserDetailScreen() {
           <Text style={styles.sectionTitle}>Daily Activity</Text>
           <View style={styles.comparisonCard}>
             <View style={styles.comparisonColumn}>
-              <Text style={styles.columnLabel}>
-                {isSameDay(selectedDate, new Date()) ? 'Today' : 'Selected'}
-              </Text>
-              {stats?.today.activity ? (
+              <Text style={styles.columnLabel}>Range</Text>
+              {loadingRange ? (
+                <ActivityIndicator color="#FF6B35" />
+              ) : activityAgg.days > 0 ? (
                 <>
                   <Text style={styles.statValue}>
-                    {stats.today.activity.steps?.toLocaleString() || 0}
+                    {Math.round(activityAgg.stepsTotal / activityAgg.days).toLocaleString()}
                   </Text>
-                  <Text style={styles.statLabel}>steps</Text>
+                  <Text style={styles.statLabel}>avg steps/day</Text>
                   <Text style={styles.statSubValue}>
-                    {stats.today.activity.calories || 0} cal
+                    {Math.round(activityAgg.caloriesTotal / activityAgg.days)} cal/day
                   </Text>
                   <Text style={styles.statSubValue}>
-                    {(stats.today.activity.distance_from_steps || 0).toFixed(2)} km
+                    {(activityAgg.distanceTotal / activityAgg.days).toFixed(2)} km/day
                   </Text>
                 </>
               ) : (
@@ -388,6 +750,27 @@ export default function UserDetailScreen() {
                 <Text style={styles.noData}>No data</Text>
               )}
             </View>
+          </View>
+        </View>
+
+        {/* Exercise Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Daily Exercise</Text>
+          <View style={styles.card}>
+            {loadingRange ? (
+              <ActivityIndicator color="#FF6B35" />
+            ) : exerciseAgg.days > 0 ? (
+              <>
+                <Text style={styles.cardSubtitle}>
+                  {exerciseAgg.workoutTotal} workout(s) in range
+                </Text>
+                <Text style={styles.infoText}>Avg workouts/day: {(exerciseAgg.workoutTotal / exerciseAgg.days).toFixed(1)}</Text>
+                <Text style={styles.infoText}>Total calories: {exerciseAgg.caloriesTotal || 0}</Text>
+                <Text style={styles.infoText}>Total distance: {exerciseAgg.distanceTotal || 0}</Text>
+              </>
+            ) : (
+              <Text style={styles.noData}>No data</Text>
+            )}
           </View>
         </View>
 
@@ -431,191 +814,26 @@ export default function UserDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Sleep & Recovery</Text>
           <View style={styles.card}>
-            {stats?.today.sleep ? (
+            {loadingRange ? (
+              <ActivityIndicator color="#FF6B35" />
+            ) : sleepAgg.days > 0 ? (
               <>
-                <Text style={styles.cardSubtitle}>
-                  {isSameDay(selectedDate, new Date()) ? 'Last Night' : 'Sleep Session'}
+                <Text style={styles.cardSubtitle}>Range summary</Text>
+                <Text style={styles.infoText}>
+                  Avg sleep score: {Math.round(sleepAgg.scoreTotal / sleepAgg.days)}
                 </Text>
-                <View style={styles.statsGrid}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Duration</Text>
-                    {stats.today.sleep.sleep_start_time && stats.today.sleep.sleep_end_time ? (
-                      <Text style={styles.statValue}>
-                        {(() => {
-                          const start = new Date(stats.today.sleep.sleep_start_time);
-                          const end = new Date(stats.today.sleep.sleep_end_time);
-                          const durationMs = end.getTime() - start.getTime();
-                          const hours = Math.floor(durationMs / (1000 * 60 * 60));
-                          const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-                          return `${hours}h ${minutes}m`;
-                        })()}
-                      </Text>
-                    ) : (
-                      <Text style={styles.noData}>No data</Text>
-                    )}
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Deep Sleep</Text>
-                    {(() => {
-                      const deepSleep = stats.today.sleep.deep_sleep ?? stats.today.sleep.data?.deep_sleep;
-                      if (deepSleep) {
-                        const hours = Math.floor(deepSleep / 3600);
-                        const minutes = Math.floor((deepSleep % 3600) / 60);
-                        return (
-                          <Text style={styles.statValue}>
-                            {hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}
-                          </Text>
-                        );
-                      }
-                      return <Text style={styles.noData}>No data</Text>;
-                    })()}
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statLabel}>Sleep Score</Text>
-                    {stats.today.sleep.sleep_score ? (
-                      <Text style={styles.statValue}>
-                        {stats.today.sleep.sleep_score}
-                      </Text>
-                    ) : (
-                      <Text style={styles.noData}>No data</Text>
-                    )}
-                  </View>
-                </View>
-                
-                {/* Heart Rate Chart */}
-                {stats.today.sleep.heart_rate_samples && (
-                  <View style={styles.chartContainer}>
-                    <Text style={styles.chartTitle}>Heart Rate During Sleep</Text>
-                    {(() => {
-                      const hrSamples = stats.today.sleep.heart_rate_samples;
-                      
-                      // Sort data by time
-                      const sortedEntries = Object.entries(hrSamples).sort((a, b) => {
-                        const [hoursA, minutesA] = a[0].split(':').map(Number);
-                        const [hoursB, minutesB] = b[0].split(':').map(Number);
-                        
-                        // Convert to minutes, handling overnight
-                        let timeA = hoursA * 60 + minutesA;
-                        let timeB = hoursB * 60 + minutesB;
-                        
-                        // If hour is small (0-11), it's likely after midnight
-                        if (hoursA < 12 && hoursA < 20) timeA += 24 * 60;
-                        if (hoursB < 12 && hoursB < 20) timeB += 24 * 60;
-                        
-                        return timeA - timeB;
-                      });
-                      
-                      const times = sortedEntries.map(e => e[0]);
-                      const values = sortedEntries.map(e => e[1]) as number[];
-                      
-                      if (times.length === 0) {
-                        return <Text style={styles.noData}>No heart rate data</Text>;
-                      }
-
-                      const minHR = Math.min(...values);
-                      const maxHR = Math.max(...values);
-                      const range = maxHR - minHR;
-                      const chartHeight = 150;
-                      
-                      // Convert time strings to minutes, handling overnight sleep
-                      const parseTime = (timeStr: string) => {
-                        const [hours, minutes] = timeStr.split(':').map(Number);
-                        let totalMinutes = hours * 60 + minutes;
-                        
-                        // If hour is small (0-11), assume it's after midnight
-                        if (hours < 12 && hours < 20) {
-                          totalMinutes += 24 * 60;
-                        }
-                        
-                        return totalMinutes;
-                      };
-                      
-                      const timeValues = times.map(time => parseTime(time));
-                      const minTime = timeValues[0];
-                      const maxTime = timeValues[timeValues.length - 1];
-                      const timeRange = maxTime - minTime;
-                      
-                      return (
-                        <View style={{ position: 'relative' }}>
-                          {hoveredPoint && (
-                            <View style={styles.tooltip}>
-                              <Text style={styles.tooltipText}>
-                                {hoveredPoint.time} - {hoveredPoint.hr} bpm
-                              </Text>
-                            </View>
-                          )}
-                          <View style={styles.chartRow}>
-                            <View style={styles.yAxisLabels}>
-                              <Text style={styles.yAxisLabel}>{maxHR}</Text>
-                              <Text style={styles.yAxisLabel}>{Math.round((maxHR + minHR) / 2)}</Text>
-                              <Text style={styles.yAxisLabel}>{minHR}</Text>
-                            </View>
-                            <View style={styles.chart}>
-                              {values.map((hr, index) => {
-                                // Scale x based on actual time difference
-                                const timeInMinutes = timeValues[index];
-                                const xPercent = ((timeInMinutes - minTime) / timeRange) * 100;
-                                const y = chartHeight - ((hr - minHR) / range) * chartHeight;
-                                
-                                return (
-                                  <View
-                                    key={index}
-                                    onPointerEnter={() => setHoveredPoint({ time: times[index], hr })}
-                                    onPointerLeave={() => setHoveredPoint(null)}
-                                    style={{
-                                      position: 'absolute',
-                                      left: `${xPercent}%`,
-                                      top: y - 12,
-                                      width: 24,
-                                      height: 24,
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      marginLeft: -12,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <View
-                                      style={{
-                                        width: 6,
-                                        height: 6,
-                                        backgroundColor: '#FF6B35',
-                                        borderRadius: 3,
-                                      }}
-                                    />
-                                  </View>
-                                );
-                              })}
-                            </View>
-                          </View>
-                          <View style={styles.chartLabels}>
-                            <Text style={styles.chartLabel}>{times[0]}</Text>
-                            <Text style={styles.chartLabel}>{times[Math.floor(times.length / 2)]}</Text>
-                            <Text style={styles.chartLabel}>{times[times.length - 1]}</Text>
-                          </View>
-                          <View style={styles.chartStats}>
-                            <View>
-                              <Text style={styles.chartStatLabel}>Min</Text>
-                              <Text style={styles.chartStatValue}>{minHR} bpm</Text>
-                            </View>
-                            <View>
-                              <Text style={styles.chartStatLabel}>Max</Text>
-                              <Text style={styles.chartStatValue}>{maxHR} bpm</Text>
-                            </View>
-                            <View>
-                              <Text style={styles.chartStatLabel}>Avg</Text>
-                              <Text style={styles.chartStatValue}>
-                                {stats.today.nightlyRecharge?.heart_rate_avg || Math.round(values.reduce((a, b) => a + b, 0) / values.length)} bpm
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      );
-                    })()}
-                  </View>
-                )}
+                <Text style={styles.infoText}>
+                  Avg duration:{' '}
+                  {(() => {
+                    const avgMinutes = Math.round(sleepAgg.durationTotal / sleepAgg.days);
+                    const h = Math.floor(avgMinutes / 60);
+                    const m = avgMinutes % 60;
+                    return `${h}h ${m}m`;
+                  })()}
+                </Text>
               </>
             ) : (
-              <Text style={styles.noData}>No sleep data</Text>
+              <Text style={styles.noData}>No data</Text>
             )}
           </View>
 
@@ -711,6 +929,16 @@ export default function UserDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Native Date Picker */}
+      {Platform.OS !== 'web' && showDatePicker && dateRange.type === 'custom' && (
+        <DateTimePicker
+          value={datePickerMode === 'start' ? dateRange.start : dateRange.end}
+          mode="date"
+          display="default"
+          onChange={onDateChange}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -724,12 +952,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 20,
     backgroundColor: '#F9F9F9',
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },
   backButton: {
+    width: 80,
     paddingRight: 16,
   },
   backButtonText: {
@@ -740,8 +969,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: '#000000',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '600',
     flex: 1,
+    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -754,6 +984,95 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  controlsCard: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  rangeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rangeLabel: {
+    color: '#666',
+    fontSize: 14,
+    marginRight: 10,
+  },
+  rangeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  rangeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+  },
+  rangeButtonActive: {
+    borderColor: '#FF6B35',
+    backgroundColor: '#FFF3EE',
+  },
+  rangeButtonText: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rangeButtonTextActive: {
+    color: '#FF6B35',
+  },
+  customRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  customDateButton: {
+    flex: 1,
+    minWidth: 140,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#F9F9F9',
+  },
+  customDateButtonLabel: {
+    color: '#666',
+    fontSize: 12,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  customDateButtonValue: {
+    color: '#000000',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  webDateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 240,
+  },
+  webDateLabel: {
+    color: '#666',
+    fontSize: 14,
+    width: 44,
+  },
+  rangeSummaryText: {
+    marginTop: 10,
+    color: '#666',
+    fontSize: 13,
+  },
+  rangeHintText: {
+    color: '#666',
+    fontSize: 13,
+    marginBottom: 10,
   },
   section: {
     padding: 20,
