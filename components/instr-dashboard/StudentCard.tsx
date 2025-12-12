@@ -1,17 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Dimensions, StyleSheet, Modal, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import Sparkline from './Sparkline';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-
 export interface StudentStats {
   id: string;
   displayName: string;
   photoURL?: string;
-  lastActive?: string;
+  lastSync?: string;
   
   // History arrays (7 days)
   hrHistory: number[];
@@ -41,6 +39,24 @@ interface StudentCardProps {
 
 type MetricType = 'hr' | 'distance' | 'sleep' | 'calories';
 
+function formatLastSync(value: string | undefined) {
+  if (!value) return 'N/A';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(date.getFullYear());
+
+  let hours = date.getHours();
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  if (hours === 0) hours = 12;
+
+  return `${dd}/${mm}/${yyyy} ${hours}:${minutes} ${ampm}`;
+}
+
 export const StudentCard: React.FC<StudentCardProps> = ({ 
   item, 
   isSelectionMode = false, 
@@ -48,8 +64,12 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   onToggleSelection,
   chartConfig = { hr: 'line', distance: 'bar', sleep: 'line', calories: 'area' }
 }) => {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('distance');
   const [isChartExpanded, setIsChartExpanded] = useState(false);
+
+  const expandedModalWidth = Math.min(windowWidth - 40, 720);
+  const expandedChartHeight = Math.round(Math.min(420, Math.max(260, windowHeight * 0.5)));
 
   const handlePress = () => {
     if (isSelectionMode && onToggleSelection) {
@@ -90,7 +110,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   };
 
   const data = getChartData();
-  const hasData = data.some(v => v > 0);
+  const safeData = data.length > 0
+    ? data
+    : (item.labels?.length ? new Array(item.labels.length).fill(0) : [0]);
 
   return (
     <TouchableOpacity 
@@ -114,7 +136,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
           </View>
           <View>
             <Text style={styles.userName}>{item.displayName}</Text>
-            <Text style={styles.lastActive}>Last Active: {item.lastActive}</Text>
+            <Text style={styles.lastSync}>Last Sync: {formatLastSync(item.lastSync)}</Text>
           </View>
         </View>
         <View style={styles.trendContainer}>
@@ -172,7 +194,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         >
           <View style={{ height: 120, width: '100%', overflow: 'hidden', borderRadius: 16 }}>
             <Sparkline 
-              data={hasData ? data : [0]} 
+              data={safeData}
               labels={item.labels}
               color={getChartColor()} 
               height={120}
@@ -189,7 +211,7 @@ export const StudentCard: React.FC<StudentCardProps> = ({
         onRequestClose={() => setIsChartExpanded(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.expandedChartContainer}>
+          <View style={[styles.expandedChartContainer, { width: expandedModalWidth, maxWidth: expandedModalWidth }]}>
             <View style={styles.expandedHeader}>
               <View>
                 <Text style={styles.expandedTitle}>{item.displayName}</Text>
@@ -199,12 +221,12 @@ export const StudentCard: React.FC<StudentCardProps> = ({
                 <Ionicons name="close-circle" size={32} color="#636E72" />
               </TouchableOpacity>
             </View>
-            <View style={{ height: 300, width: '100%', marginTop: 20 }}>
+            <View style={{ height: expandedChartHeight, width: '100%', marginTop: 20 }}>
               <Sparkline 
-                data={hasData ? data : [0]} 
+                data={safeData}
                 labels={item.labels}
                 color={getChartColor()} 
-                height={300}
+                height={expandedChartHeight}
                 type={chartConfig[selectedMetric]}
               />
             </View>
@@ -281,7 +303,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2D3436',
   },
-  lastActive: {
+  lastSync: {
     fontSize: 12,
     color: '#636E72',
     marginTop: 2,

@@ -20,7 +20,7 @@ import { useInstructor } from '@/src/hooks/useInstructor';
 import { useInstructorStudents } from '@/src/hooks/useInstructorStudents';
 import { Ionicons } from '@expo/vector-icons';
 import { db } from '@/src/services/firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, limit, orderBy, query } from 'firebase/firestore';
 import { StudentCard, StudentStats, ChartType } from '@/components/instr-dashboard/StudentCard';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -97,7 +97,7 @@ export default function InstructorDashboard() {
           const caloriesHistory: number[] = [];
           const sleepHistory: number[] = []; // Placeholder for now
           
-          let lastActive = 'N/A';
+          let lastSync: string | undefined = userData.lastSync;
           
           const datesToCheck: string[] = [];
           const current = new Date(range.start);
@@ -112,13 +112,17 @@ export default function InstructorDashboard() {
             current.setDate(current.getDate() + 1);
           }
 
-          const exercisesDocs = await Promise.all(datesToCheck.map(date => 
-            getDoc(doc(db, `users/${userId}/polarData/exercises/all/${date}`))
-          ));
+          const [exercisesDocs, sleepDocs] = await Promise.all([
+            Promise.all(datesToCheck.map(date =>
+              getDoc(doc(db, `users/${userId}/polarData/exercises/all/${date}`))
+            )),
+            Promise.all(datesToCheck.map(date =>
+              getDoc(doc(db, `users/${userId}/polarData/sleep/all/${date}`))
+            )),
+          ]);
 
-          exercisesDocs.forEach((docSnap) => {
+          exercisesDocs.forEach((docSnap, index) => {
             if (docSnap.exists()) {
-              lastActive = docSnap.id; // Since we iterate chronologically, the last one is the latest
               const data = docSnap.data();
               
               if (data.exercises && Array.isArray(data.exercises)) {
@@ -150,9 +154,33 @@ export default function InstructorDashboard() {
               distanceHistory.push(0);
               caloriesHistory.push(0);
             }
-            // Sleep placeholder
-            sleepHistory.push(0);
+
+            // Sleep score (0 if missing)
+            const sleepDoc = sleepDocs[index];
+            if (sleepDoc?.exists()) {
+              const sleepScore = sleepDoc.data()?.sleep_score;
+              sleepHistory.push(typeof sleepScore === 'number' ? sleepScore : 0);
+            } else {
+              sleepHistory.push(0);
+            }
           });
+
+          // Fallback: try to derive lastSync from latest sync summary if user profile doesn't have it
+          if (!lastSync) {
+            try {
+              const summaryQuery = query(
+                collection(db, `users/${userId}/polarData/syncSummary/all`),
+                orderBy('syncedAt', 'desc'),
+                limit(1)
+              );
+              const summarySnapshot = await getDocs(summaryQuery);
+              if (!summarySnapshot.empty) {
+                lastSync = summarySnapshot.docs[0].data()?.syncedAt;
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
 
           // Data is already chronological (Oldest -> Newest)
           
@@ -176,6 +204,9 @@ export default function InstructorDashboard() {
           const validCals = caloriesHistory.filter(v => v > 0);
           const avgCalories = validCals.length > 0 ? Math.round(validCals.reduce((a, b) => a + b, 0) / validCals.length) : 0;
 
+          const validSleep = sleepHistory.filter(v => v > 0);
+          const avgSleep = validSleep.length > 0 ? Math.round(validSleep.reduce((a, b) => a + b, 0) / validSleep.length) : 0;
+
           // Determine trend based on Calories (or HR?) - Let's use Calories as "Effort"
           let trend: 'up' | 'down' | 'stable' = 'stable';
           if (validCals.length >= 2) {
@@ -189,7 +220,7 @@ export default function InstructorDashboard() {
             id: userId,
             displayName: userData.displayName || 'Unknown Cadet',
             photoURL: userData.photoURL,
-            lastActive,
+            lastSync,
             hrHistory,
             distanceHistory,
             sleepHistory,
@@ -197,7 +228,7 @@ export default function InstructorDashboard() {
             labels,
             avgHr,
             avgDistance,
-            avgSleep: 0, // Placeholder
+            avgSleep,
             avgCalories,
             trend
           } as StudentStats;
@@ -325,7 +356,6 @@ export default function InstructorDashboard() {
               <TouchableOpacity 
                 style={[styles.rangeButton, dateRange.type === 'custom' && styles.rangeButtonActive]}
                 onPress={() => {
-                  console.log('Opening date picker');
                   setDatePickerMode('start');
                   setShowDatePicker(true);
                 }}
