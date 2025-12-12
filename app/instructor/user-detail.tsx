@@ -5,6 +5,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  Modal,
   Pressable,
   TouchableOpacity,
   Platform,
@@ -16,6 +17,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { db } from '@/src/services/firebase';
 import { doc, getDoc, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { Ionicons } from '@expo/vector-icons';
 
 // Helper function to convert ISO8601 duration to readable format
 function formatDuration(iso8601Duration: string): string {
@@ -197,16 +199,39 @@ export default function UserDetailScreen() {
     return dates;
   }, [dateRange]);
 
-  const onDateChange = (_event: any, picked?: Date) => {
-    if (Platform.OS !== 'ios') {
+  const onDateChange = (event: any, picked?: Date) => {
+    if (event?.type === 'dismissed') {
       setShowDatePicker(false);
+      return;
     }
-    if (!picked || isNaN(picked.getTime())) return;
-    setDateRange((prev) => ({
-      ...prev,
-      type: 'custom',
-      [datePickerMode]: picked,
-    }));
+
+    const currentDate = picked || (datePickerMode === 'start' ? dateRange.start : dateRange.end);
+    if (!currentDate || isNaN(currentDate.getTime())) return;
+
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+      if (datePickerMode === 'start') {
+        setDateRange((prev) => ({ ...prev, start: currentDate, type: 'custom' }));
+        setTimeout(() => {
+          setDatePickerMode('end');
+          setShowDatePicker(true);
+        }, 100);
+      } else {
+        setDateRange((prev) => ({ ...prev, end: currentDate, type: 'custom' }));
+      }
+    } else {
+      // iOS: close on selection, then optionally open end picker
+      setShowDatePicker(false);
+      if (datePickerMode === 'start') {
+        setDateRange((prev) => ({ ...prev, start: currentDate, type: 'custom' }));
+        setTimeout(() => {
+          setDatePickerMode('end');
+          setShowDatePicker(true);
+        }, 500);
+      } else {
+        setDateRange((prev) => ({ ...prev, end: currentDate, type: 'custom' }));
+      }
+    }
   };
 
   const loadRange = useCallback(async () => {
@@ -560,110 +585,37 @@ export default function UserDetailScreen() {
         <View style={styles.rangeRow}>
           <Text style={styles.rangeLabel}>Range:</Text>
           <View style={styles.rangeButtons}>
-            {([
-              { key: '7d', label: '7d' },
-              { key: '14d', label: '14d' },
-              { key: '30d', label: '30d' },
-            ] as const).map((r) => (
-              <TouchableOpacity
-                key={r.key}
-                style={[styles.rangeButton, dateRange.type === r.key && styles.rangeButtonActive]}
-                onPress={() => {
-                  const end = new Date(dateRange.end);
-                  const start = new Date(end);
-                  const days = r.key === '7d' ? 7 : r.key === '14d' ? 14 : 30;
-                  start.setDate(start.getDate() - (days - 1));
-                  setDateRange({ type: r.key, start, end });
-                }}
-              >
-                <Text style={[styles.rangeButtonText, dateRange.type === r.key && styles.rangeButtonTextActive]}>
-                  {r.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {[7, 14, 30].map((days) => {
+              const key = `${days}d` as PresetRange;
+              return (
+                <TouchableOpacity
+                  key={key}
+                  style={[styles.rangeButton, dateRange.type === key && styles.rangeButtonActive]}
+                  onPress={() => {
+                    const end = new Date();
+                    const start = new Date(end);
+                    start.setDate(start.getDate() - (days - 1));
+                    setDateRange({ type: key, start, end });
+                  }}
+                >
+                  <Text style={[styles.rangeButtonText, dateRange.type === key && styles.rangeButtonTextActive]}>
+                    {days}d
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
 
             <TouchableOpacity
               style={[styles.rangeButton, dateRange.type === 'custom' && styles.rangeButtonActive]}
               onPress={() => {
-                setDateRange((prev) => ({ ...prev, type: 'custom' }));
-                if (Platform.OS === 'web') return;
+                setDatePickerMode('start');
                 setShowDatePicker(true);
               }}
             >
-              <Text style={[styles.rangeButtonText, dateRange.type === 'custom' && styles.rangeButtonTextActive]}>
-                Custom
-              </Text>
+              <Ionicons name="calendar" size={16} color={dateRange.type === 'custom' ? '#FFF' : '#666'} />
             </TouchableOpacity>
           </View>
         </View>
-
-        {dateRange.type === 'custom' && (
-          <View style={styles.customRow}>
-            {Platform.OS === 'web' ? (
-              <>
-                <View style={styles.webDateRow}>
-                  <Text style={styles.webDateLabel}>Start:</Text>
-                  {React.createElement('input', {
-                    type: 'date',
-                    value: dateRange.start.toISOString().split('T')[0],
-                    onChange: (e: any) => {
-                      const d = new Date(e.target.value);
-                      if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, start: d, type: 'custom' }));
-                    },
-                    style: {
-                      padding: 8,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: '#D1D5DB',
-                      fontSize: 16,
-                    },
-                  })}
-                </View>
-                <View style={styles.webDateRow}>
-                  <Text style={styles.webDateLabel}>End:</Text>
-                  {React.createElement('input', {
-                    type: 'date',
-                    value: dateRange.end.toISOString().split('T')[0],
-                    onChange: (e: any) => {
-                      const d = new Date(e.target.value);
-                      if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, end: d, type: 'custom' }));
-                    },
-                    style: {
-                      padding: 8,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: '#D1D5DB',
-                      fontSize: 16,
-                    },
-                  })}
-                </View>
-              </>
-            ) : (
-              <>
-                <TouchableOpacity
-                  style={styles.customDateButton}
-                  onPress={() => {
-                    setDatePickerMode('start');
-                    setShowDatePicker(true);
-                  }}
-                >
-                  <Text style={styles.customDateButtonLabel}>Start</Text>
-                  <Text style={styles.customDateButtonValue}>{dateRange.start.toLocaleDateString()}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.customDateButton}
-                  onPress={() => {
-                    setDatePickerMode('end');
-                    setShowDatePicker(true);
-                  }}
-                >
-                  <Text style={styles.customDateButtonLabel}>End</Text>
-                  <Text style={styles.customDateButtonValue}>{dateRange.end.toLocaleDateString()}</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-        )}
 
         <Text style={styles.rangeSummaryText}>{rangeLabel}</Text>
       </View>
@@ -930,6 +882,64 @@ export default function UserDetailScreen() {
         )}
       </ScrollView>
 
+      {/* Web Date Picker Modal (matches instructor tab UX) */}
+      {Platform.OS === 'web' && showDatePicker && (
+        <Modal
+          transparent={true}
+          animationType="fade"
+          visible={showDatePicker}
+          onRequestClose={() => setShowDatePicker(false)}
+        >
+          <View style={styles.webModalOverlay}>
+            <View style={styles.webModalContent}>
+              <Text style={styles.webModalTitle}>Select Date Range</Text>
+
+              <View style={styles.webDateRow}>
+                <Text style={styles.webDateLabel}>Start:</Text>
+                {React.createElement('input', {
+                  type: 'date',
+                  value: (dateRange.start instanceof Date ? dateRange.start : new Date()).toISOString().split('T')[0],
+                  onChange: (e: any) => {
+                    const d = new Date(e.target.value);
+                    if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, start: d, type: 'custom' }));
+                  },
+                  style: {
+                    padding: 8,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    fontSize: 16,
+                  },
+                })}
+              </View>
+
+              <View style={styles.webDateRow}>
+                <Text style={styles.webDateLabel}>End:</Text>
+                {React.createElement('input', {
+                  type: 'date',
+                  value: (dateRange.end instanceof Date ? dateRange.end : new Date()).toISOString().split('T')[0],
+                  onChange: (e: any) => {
+                    const d = new Date(e.target.value);
+                    if (!isNaN(d.getTime())) setDateRange((prev) => ({ ...prev, end: d, type: 'custom' }));
+                  },
+                  style: {
+                    padding: 8,
+                    borderRadius: 8,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    fontSize: 16,
+                  },
+                })}
+              </View>
+
+              <TouchableOpacity style={styles.webApplyButton} onPress={() => setShowDatePicker(false)}>
+                <Text style={styles.webApplyButtonText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* Native Date Picker */}
       {Platform.OS !== 'web' && showDatePicker && dateRange.type === 'custom' && (
         <DateTimePicker
@@ -1026,32 +1036,6 @@ const styles = StyleSheet.create({
   rangeButtonTextActive: {
     color: '#FF6B35',
   },
-  customRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  customDateButton: {
-    flex: 1,
-    minWidth: 140,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#F9F9F9',
-  },
-  customDateButtonLabel: {
-    color: '#666',
-    fontSize: 12,
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-  customDateButtonValue: {
-    color: '#000000',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   webDateRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1063,6 +1047,39 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     width: 44,
+  },
+  webModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  webModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  webModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#000000',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  webApplyButton: {
+    backgroundColor: '#FF6B35',
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  webApplyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   rangeSummaryText: {
     marginTop: 10,
