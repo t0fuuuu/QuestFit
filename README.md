@@ -500,6 +500,10 @@ This project is licensed under the **0BSD License** - see the [LICENSE](LICENSE)
 
 ---
 
+## 🙏 Credits
+
+- Creature pixel icons used in the app are sourced from: https://github.com/ZeChrales/PogoAssets/tree/master/pixels
+
 ## 👥 Team & Contact
 
 **Creator**: [pika3113](https://github.com/pika3113)

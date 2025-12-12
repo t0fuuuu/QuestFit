@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../vercel-types';
 import axios from 'axios';
 const admin = require('firebase-admin');
 
