@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
 import { useAuth } from '@/src/hooks/useAuth';
@@ -27,7 +28,7 @@ export default function MyRewardsScreen() {
   const redeemedRewards = profile?.redeemedRewards || [];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
       <Stack.Screen options={{ title: 'My Rewards', headerBackTitle: 'Back' }} />
       
       <ScrollView contentContainerStyle={styles.contentContainer}>
@@ -66,7 +67,7 @@ export default function MyRewardsScreen() {
           ))
         )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 

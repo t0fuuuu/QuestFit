@@ -122,11 +122,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                  const date = startTime.split('T')[0];
                  console.log(`Processing EXERCISE for date: ${date}`);
                  
-                 // Update deviceId if present in the exercise data
+                 // Update deviceID if present in the exercise data
                  if (data.device_id) {
-                     console.log(`Updating deviceId for user ${userId} to ${data.device_id}`);
+                     console.log(`Updating deviceID for user ${userId} to ${data.device_id}`);
                      await db.collection('users').doc(userId).set({
-                         deviceId: data.device_id
+                         deviceID: data.device_id
                      }, { merge: true });
                  }
 

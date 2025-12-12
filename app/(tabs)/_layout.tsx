@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Tabs } from 'expo-router';
-import { Pressable, StyleSheet, Image, View, Modal, Alert, ActivityIndicator } from 'react-native';
+import { Pressable, StyleSheet, Image, View, Modal, Alert, ActivityIndicator, Platform } from 'react-native';
 import { Text } from '@/components/Themed';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -136,13 +136,47 @@ export default function TabLayout() {
     <>
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#FF6B35',
+        tabBarInactiveTintColor: '#636E72',
+        tabBarStyle: {
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          height: Platform.OS === 'ios' ? 85 : 65,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          paddingTop: 10,
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: -2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 8,
+          elevation: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
         // disable the static render of the header on web
         // prevent a hydration error in React Navigation v6 i think idk it breaks if i dont put it there
         headerShown: useClientOnlyValue(false, true),
         headerTitleAlign: 'center',
+        headerStyle: {
+          backgroundColor: '#FFFFFF',
+          shadowColor: "#000",
+          shadowOffset: {
+            width: 0,
+            height: 2,
+          },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
+          elevation: 5,
+          borderBottomWidth: 0,
+        },
         headerTitleStyle: {
           textAlign: 'center',
+          color: '#000000',
+          fontWeight: 'bold',
         },
         headerLeft: () => (
           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 16 }}>
@@ -167,15 +201,6 @@ export default function TabLayout() {
           title: 'Home',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="fire" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="creatures"
-        options={{
-          href: null,
-          title: 'Creatures',
-          headerTitle: 'QuestFit',
-          tabBarIcon: ({ color }) => <TabBarIcon name="gitlab" color={color} />,
         }}
       />
       <Tabs.Screen
@@ -214,6 +239,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="creatures"
+        options={{
+          // href: null,
+          title: 'Creatures',
+          headerTitle: 'QuestFit',
+          tabBarIcon: ({ color }) => <TabBarIcon name="gitlab" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="test"
         options={{
           title: 'Test',
@@ -229,6 +263,12 @@ export default function TabLayout() {
           title: 'Instructor',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon6 name="chalkboard-user" color={color} size={24} />,
+        }}
+      />
+      <Tabs.Screen
+        name="instr-dashboard.old"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

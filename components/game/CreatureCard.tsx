@@ -86,7 +86,7 @@ interface CardGridProps {
 
 export const CreatureCardGrid: React.FC<CardGridProps> = ({
   cards,
-  minCardWidth = 325, // minimum size a card can shrink to
+  minCardWidth = 300, // minimum size a card can shrink to
   onPress
 }: CardGridProps) => {
   const [cardWidth, setCardWidth] = useState(2);
@@ -108,7 +108,7 @@ export const CreatureCardGrid: React.FC<CardGridProps> = ({
   return (
     <View style={styles.grid}>
       {cards.map(card => (
-        <View style={{ width: cardWidth, minWidth: minCardWidth }} key={card.creature.id}>
+        <View style={{ width: cardWidth }} key={card.creature.id}>
         <Pressable 
         style={[styles.card, { 
           borderColor: getRarityColor(card.creature.rarity)

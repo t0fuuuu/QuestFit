@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useLiveWorkout } from '@/src/hooks/useLiveWorkout';
 import Colors from '@/constants/Colors';
@@ -152,6 +153,7 @@ export default function LiveWorkoutScreen() {
   };
 
   return (
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['left', 'right', 'bottom']}>
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Live Workout</Text>
@@ -267,5 +269,6 @@ export default function LiveWorkoutScreen() {
         }}
       />
     </ScrollView>
+    </SafeAreaView>
   );
 }

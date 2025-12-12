@@ -9,6 +9,7 @@ import {
   Modal,
   Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useGameProfile } from '@/src/hooks/useGameProfile';
 import { useAuth } from '@/src/hooks/useAuth';
@@ -108,14 +109,14 @@ export default function HomeScreen() {
     }
     
     if (Platform.OS === 'web') {
-      const confirmed = window.confirm(`Are you sure you want to redeem ${reward.name} for ${reward.xpThreshold} XP?`);
+      const confirmed = window.confirm(`Are you sure you want to redeem ${reward.name} for ${reward.xpThreshold} QP?`);
       if (confirmed) {
         await performRedemption(reward);
       }
     } else {
       Alert.alert(
         "Redeem Reward",
-        `Are you sure you want to redeem ${reward.name} for ${reward.xpThreshold} XP?`,
+        `Are you sure you want to redeem ${reward.name} for ${reward.xpThreshold} QP?`,
         [
           { text: "Cancel", style: "cancel" },
           { 
@@ -140,6 +141,7 @@ export default function HomeScreen() {
   const creatureCount = profile?.capturedCreatures?.length || 0;
 
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: ModernColors.background }} edges={['left', 'right', 'bottom']}>
     <ScrollView 
       style={styles.scrollView} 
       contentContainerStyle={styles.contentContainer}
@@ -168,7 +170,7 @@ export default function HomeScreen() {
       <View style={styles.levelCard}>
         <View style={styles.levelInfo}>
           <View style={{ backgroundColor: 'transparent' }}>
-            <Text style={styles.levelLabel}>Total Experience</Text>
+            <Text style={styles.levelLabel}>Total QuestPoints</Text>
             <Text style={styles.levelValue}>{profile?.xp || 0}</Text>
           </View>
           <View style={styles.xpBadge}>
@@ -318,7 +320,7 @@ export default function HomeScreen() {
                 <Ionicons name="close" size={24} color={ModernColors.text} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>Current XP: {profile?.xp || 0}</Text>
+            <Text style={styles.modalSubtitle}>Current QPs: {profile?.xp || 0}</Text>
             
             <ScrollView style={styles.rewardsList}>
               {REWARDS.map((reward) => {
@@ -327,7 +329,7 @@ export default function HomeScreen() {
                   <View key={reward.id} style={styles.rewardItem}>
                     <View style={{flex: 1, backgroundColor: 'transparent'}}>
                       <Text style={styles.rewardName}>{reward.name}</Text>
-                      <Text style={styles.rewardCost}>{reward.xpThreshold} XP</Text>
+                      <Text style={styles.rewardCost}>{reward.xpThreshold} QP</Text>
                     </View>
                     <TouchableOpacity 
                       style={[styles.redeemActionBtn, !canRedeem && styles.redeemActionBtnDisabled]}
@@ -346,6 +348,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, View } from '@/components/Themed';
 import { useMultiDeviceWorkout } from '@/src/hooks/useMultiDeviceWorkout';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { Device } from 'react-native-ble-plx';
+import { BluetoothDevice } from '@/src/services/bluetoothTypes';
 import { liveStyles as styles } from '@/src/styles';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/src/services/firebase';
@@ -49,8 +50,30 @@ export default function MultiDeviceLiveWorkoutScreen() {
     const fetchDeviceOwners = async () => {
       if (availableDevices.length === 0) return;
 
+      console.log('🔍 Fetching owners for devices:', availableDevices.map(d => ({ id: d.id, name: d.name })));
+
       try {
         const deviceIds = availableDevices.map(d => d.id);
+        const nameToIdMap: Record<string, string> = {};
+
+        // Also extract IDs from names (e.g. "Polar Pacer E5C6EC25" -> "E5C6EC25")
+        availableDevices.forEach(d => {
+          if (d.name) {
+            const parts = d.name.split(' ');
+            const lastPart = parts[parts.length - 1];
+            // Check if last part looks like a device ID (hex string, usually 8 chars)
+            if (/^[0-9A-F]{8}$/i.test(lastPart)) {
+               console.log(`   Extracted ID from name: ${lastPart} -> maps to device ID: ${d.id}`);
+               nameToIdMap[lastPart] = d.id;
+               if (!deviceIds.includes(lastPart)) {
+                 deviceIds.push(lastPart);
+               }
+            }
+          }
+        });
+
+        console.log('   Querying Firestore for IDs:', deviceIds);
+
         // Firestore 'in' query limit is 10
         const chunks = [];
         for (let i = 0; i < deviceIds.length; i += 10) {
@@ -60,16 +83,40 @@ export default function MultiDeviceLiveWorkoutScreen() {
         const newOwners: Record<string, string> = {};
 
         for (const chunk of chunks) {
-          const q = query(collection(db, 'users'), where('deviceId', 'in', chunk));
-          const querySnapshot = await getDocs(q);
-          querySnapshot.forEach((doc) => {
+          console.log(`   Querying users where deviceID or deviceId is in:`, chunk);
+          
+          // Check 'deviceID' (new schema)
+          const q1 = query(collection(db, 'users'), where('deviceID', 'in', chunk));
+          const snap1 = await getDocs(q1);
+          
+          // Check 'deviceId' (old schema)
+          const q2 = query(collection(db, 'users'), where('deviceId', 'in', chunk));
+          const snap2 = await getDocs(q2);
+
+          const processDoc = (doc: any) => {
             const data = doc.data();
-            if (data.deviceId && data.displayName) {
-              newOwners[data.deviceId] = data.displayName;
+            const id = data.deviceID || data.deviceId;
+            console.log('   Found user doc:', doc.id, 'id:', id, 'name:', data.displayName);
+            
+            if (id && data.displayName) {
+              // If direct match with device ID
+              if (availableDevices.some(d => d.id === id)) {
+                console.log(`   MATCH (Direct): ${id} -> ${data.displayName}`);
+                newOwners[id] = data.displayName;
+              }
+              // If match with extracted ID from name
+              if (nameToIdMap[id]) {
+                console.log(`   MATCH (Extracted): ${id} (maps to ${nameToIdMap[id]}) -> ${data.displayName}`);
+                newOwners[nameToIdMap[id]] = data.displayName;
+              }
             }
-          });
+          };
+
+          snap1.forEach(processDoc);
+          snap2.forEach(processDoc);
         }
 
+        console.log('   Final newOwners map:', newOwners);
         setDeviceOwners(prev => ({ ...prev, ...newOwners }));
       } catch (error) {
         console.error('Error fetching device owners:', error);
@@ -87,7 +134,7 @@ export default function MultiDeviceLiveWorkoutScreen() {
     await scanForDevices();
   };
 
-  const handleConnect = async (device: Device) => {
+  const handleConnect = async (device: BluetoothDevice) => {
     try {
       await connectToDevice(device);
       Alert.alert('Connected', `Connected to ${device.name || device.id}`);
@@ -171,6 +218,7 @@ export default function MultiDeviceLiveWorkoutScreen() {
     : null;
 
   return (
+    <SafeAreaView style={[styles.container, { flex: 1 }]} edges={['left', 'right', 'bottom']}>
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <View style={styles.header}>
         <Text style={styles.title}>Instructor's Dashboard</Text>
@@ -276,5 +324,6 @@ export default function MultiDeviceLiveWorkoutScreen() {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
