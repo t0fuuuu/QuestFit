@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, useWindowDimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, SafeAreaView, useWindowDimensions, Platform } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -68,7 +68,9 @@ export const StudentCard: React.FC<StudentCardProps> = ({
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('distance');
   const [isChartExpanded, setIsChartExpanded] = useState(false);
 
-  const expandedModalWidth = Math.min(windowWidth - 40, 720);
+  const expandedModalMaxWidth = Platform.OS === 'web' ? 1200 : 720;
+  const expandedModalTargetWidth = Platform.OS === 'web' ? windowWidth * 0.92 : windowWidth - 40;
+  const expandedModalWidth = Math.max(320, Math.min(expandedModalTargetWidth, expandedModalMaxWidth));
   const expandedChartHeight = Math.round(Math.min(420, Math.max(260, windowHeight * 0.5)));
 
   const handlePress = () => {
