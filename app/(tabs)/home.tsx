@@ -234,13 +234,19 @@ export default function HomeScreen() {
           icon="fitness" 
           label="Workout" 
           color="#FF6B35" 
-          onPress={() => router.push('/(tabs)/multi-device')} 
+          onPress={() => router.push('/(tabs)/workout')} 
         />
         <QuickActionButton 
           icon="paw" 
           label="Creatures" 
           color="#2E86AB" 
           onPress={() => router.push('/(tabs)/creatures')} 
+        />
+        <QuickActionButton 
+          icon="medal"
+          label="Achievements"
+          color="#00B894"
+          onPress={() => router.push('/achievements')}
         />
         <QuickActionButton 
           icon="trophy" 

@@ -25,6 +25,12 @@ export default function Sparkline({ data, labels, color, height = 100, type = 'l
     data: data
   }];
 
+  const finiteData = Array.isArray(data) ? data.filter((v) => typeof v === 'number' && Number.isFinite(v)) : [];
+  const maxVal = finiteData.length ? Math.max(...finiteData) : 0;
+  // Keep a small amount of headroom so bars/lines don't touch the top.
+  const headroomPct = 0;
+  const yMax = maxVal > 0 ? Math.ceil(maxVal * (1 + headroomPct)) : undefined;
+
   const options: ApexCharts.ApexOptions = {
     chart: {
       type: type,
@@ -51,7 +57,29 @@ export default function Sparkline({ data, labels, color, height = 100, type = 'l
       bar: {
         borderRadius: 4,
         columnWidth: '60%',
+        dataLabels: {
+          position: 'center',
+        },
       }
+    },
+    dataLabels: {
+      enabled: type === 'bar',
+      formatter: (val: number) => {
+        if (typeof val !== 'number' || !Number.isFinite(val) || val === 0) return '';
+        return Math.round(val).toLocaleString();
+      },
+      style: {
+        colors: ['#FFFFFF'],
+        fontSize: '12px',
+        fontWeight: 700,
+      },
+      textAnchor: 'middle',
+      offsetX: 0,
+      // Nudge slightly down to better center vertically in horizontal bars.
+      offsetY: 2,
+      dropShadow: {
+        enabled: false,
+      },
     },
     markers: {
       size: type === 'scatter' ? 5 : 0,
@@ -98,7 +126,8 @@ export default function Sparkline({ data, labels, color, height = 100, type = 'l
       }
     },
     yaxis: {
-      show: false
+      show: false,
+      max: yMax,
     },
     tooltip: {
       fixed: {
@@ -120,14 +149,14 @@ export default function Sparkline({ data, labels, color, height = 100, type = 'l
   };
 
   return (
-    <div style={{ width: '100%', height }}>
+    <div style={{ width: '100%', height: `${height}px` }}>
       {isMounted && (
         <React.Suspense fallback={<div />}>
           <Chart
             options={options}
             series={series}
             type={type}
-            height="100%"
+            height={height}
             width="100%"
           />
         </React.Suspense>

@@ -194,12 +194,12 @@ export const StudentCard: React.FC<StudentCardProps> = ({
           activeOpacity={0.8}
           style={{ width: '100%' }}
         >
-          <View style={{ height: 120, width: '100%', overflow: 'hidden', borderRadius: 16 }}>
+          <View style={{ height: 270, width: '100%', overflow: 'hidden', borderRadius: 16 }}>
             <Sparkline 
               data={safeData}
               labels={item.labels}
               color={getChartColor()} 
-              height={120}
+              height={270}
               type={chartConfig[selectedMetric]}
             />
           </View>

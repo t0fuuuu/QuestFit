@@ -206,7 +206,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="workout"
         options={{
-          href: null,
+          // Workout is the real route (used to be multi-device).
           title: 'Workout',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon name="heartbeat" color={color} />,
@@ -224,7 +224,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="multi-device"
         options={{
-          title: 'Workout',
+          // Keep this screen mounted in tabs but real URL is /workout.
+          href: null,
+          title: 'Multi-Device (Legacy)',
           headerTitle: 'QuestFit',
           tabBarIcon: ({ color }) => <TabBarIcon6 name="people-robbery" color={color} size={24} />,
         }}
