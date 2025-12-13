@@ -92,6 +92,12 @@ Unlock rare and legendary creatures by completing fitness challenges:
 - Participant management interface
 - Export group workout data
 
+### 🧪 Emulation Mode (Dev)
+
+You can emulate Polar watch heart rate data for testing on web.
+
+- Open `http://localhost:8081/workout?emulate=true` to configure and run emulation.
+
 #### ☁️ Polar Flow Cloud Integration
 
 Seamless integration with the Polar ecosystem:
@@ -499,6 +505,10 @@ This project is licensed under the **0BSD License** - see the [LICENSE](LICENSE)
 - ❌ No liability or warranty
 
 ---
+
+## 🙏 Credits
+
+- Creature pixel icons used in the app are sourced from: https://github.com/ZeChrales/PogoAssets/tree/master/pixels
 
 ## 👥 Team & Contact
 

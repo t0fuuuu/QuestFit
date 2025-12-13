@@ -112,48 +112,74 @@ export default function InstructorDashboard() {
             current.setDate(current.getDate() + 1);
           }
 
-          const [exercisesDocs, sleepDocs] = await Promise.all([
+          const [exercisesDocs, sleepDocs, activityDocs] = await Promise.all([
             Promise.all(datesToCheck.map(date =>
               getDoc(doc(db, `users/${userId}/polarData/exercises/all/${date}`))
             )),
             Promise.all(datesToCheck.map(date =>
               getDoc(doc(db, `users/${userId}/polarData/sleep/all/${date}`))
             )),
+            Promise.all(datesToCheck.map(date =>
+              getDoc(doc(db, `users/${userId}/polarData/activities/all/${date}`))
+            )),
           ]);
 
-          exercisesDocs.forEach((docSnap, index) => {
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              
-              if (data.exercises && Array.isArray(data.exercises)) {
-                // Calculate daily totals/averages
-                let dayHrSum = 0;
-                let dayHrCount = 0;
-                let dayDist = 0;
-                let dayCals = 0;
+          datesToCheck.forEach((_, index) => {
+            const exercisesSnap = exercisesDocs[index];
+            const activitySnap = activityDocs[index];
 
+            // HR comes from exercises (best source)
+            let dayHrSum = 0;
+            let dayHrCount = 0;
+
+            // Distance/Calories prefer activities (more consistently present), fallback to exercises
+            let dayDist = 0;
+            let dayCals = 0;
+
+            if (activitySnap?.exists()) {
+              const a = activitySnap.data();
+              const distMeters =
+                typeof a?.distance_from_steps === 'number'
+                  ? a.distance_from_steps
+                  : typeof a?.activity?.distanceMeters === 'number'
+                    ? a.activity.distanceMeters
+                    : null;
+
+              if (distMeters != null) {
+                // StudentCard labels this as Distance (m)
+                dayDist = Math.round(distMeters);
+              }
+
+              if (typeof a?.calories === 'number') {
+                dayCals = Math.round(a.calories);
+              } else if (typeof a?.active_calories === 'number') {
+                dayCals = Math.round(a.active_calories);
+              }
+            }
+
+            if (exercisesSnap?.exists()) {
+              const data = exercisesSnap.data();
+              if (data.exercises && Array.isArray(data.exercises)) {
+                let exDist = 0;
+                let exCals = 0;
                 data.exercises.forEach((ex: any) => {
                   if (ex.heart_rate?.average) {
                     dayHrSum += ex.heart_rate.average;
                     dayHrCount++;
                   }
-                  if (ex.distance) dayDist += ex.distance;
-                  if (ex.calories) dayCals += ex.calories;
+                  if (typeof ex.distance === 'number') exDist += ex.distance;
+                  if (typeof ex.calories === 'number') exCals += ex.calories;
                 });
-                
-                hrHistory.push(dayHrCount > 0 ? Math.round(dayHrSum / dayHrCount) : 0);
-                distanceHistory.push(Math.round(dayDist));
-                caloriesHistory.push(Math.round(dayCals));
-              } else {
-                hrHistory.push(0);
-                distanceHistory.push(0);
-                caloriesHistory.push(0);
+
+                // Fallback only if activities didn't provide these
+                if (dayDist === 0) dayDist = Math.round(exDist);
+                if (dayCals === 0) dayCals = Math.round(exCals);
               }
-            } else {
-              hrHistory.push(0);
-              distanceHistory.push(0);
-              caloriesHistory.push(0);
             }
+
+            hrHistory.push(dayHrCount > 0 ? Math.round(dayHrSum / dayHrCount) : 0);
+            distanceHistory.push(dayDist);
+            caloriesHistory.push(dayCals);
 
             // Sleep score (0 if missing)
             const sleepDoc = sleepDocs[index];
@@ -473,8 +499,10 @@ export default function InstructorDashboard() {
             
             <View style={styles.settingsContent}>
               <Text style={styles.sectionTitle}>Customize Graphs</Text>
-              
-              {Object.entries(chartConfig).map(([metric, type]) => (
+
+              {(['distance', 'hr', 'sleep', 'calories'] as const).map((metric) => {
+                const type = chartConfig[metric];
+                return (
                 <View key={metric} style={styles.settingRow}>
                   <Text style={styles.settingLabel}>
                     {metric === 'hr' ? 'Heart Rate' : 
@@ -500,7 +528,8 @@ export default function InstructorDashboard() {
                     ))}
                   </View>
                 </View>
-              ))}
+                );
+              })}
             </View>
           </View>
         </SafeAreaView>

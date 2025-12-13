@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../vercel-types';
 import axios from 'axios';
 const admin = require('firebase-admin');
 
@@ -237,10 +237,38 @@ async function insertDataToFirebase(userId: string, date: string, data: any) {
   const syncedAt = new Date().toISOString();
   let itemsQueued = 0;
 
+  const normalizeActivityDistance = (activitiesPayload: any) => {
+    const activity = activitiesPayload?.activity ?? activitiesPayload;
+    if (!activity || typeof activity !== 'object') return null;
+
+    const rawDistance =
+      activity.distance ??
+      activity.total_distance ??
+      activity.totalDistance ??
+      activity.distance_meters ??
+      activity.distanceMeters;
+
+    const distanceMeters =
+      typeof rawDistance === 'number' && Number.isFinite(rawDistance) ? rawDistance : null;
+
+    return {
+      activity: {
+        ...activity,
+        distanceMeters,
+        distanceKm: distanceMeters != null ? distanceMeters / 1000 : null,
+      },
+    };
+  };
+
   // Insert activities
   if (data.activities) {
     const ref = userPolarRef.doc('activities').collection('all').doc(date);
-    batch.set(ref, { ...data.activities, syncedAt });
+    const normalized = normalizeActivityDistance(data.activities);
+    if (normalized) {
+      batch.set(ref, { ...data.activities, ...normalized, syncedAt });
+    } else {
+      batch.set(ref, { ...data.activities, syncedAt });
+    }
     itemsQueued++;
   }
 

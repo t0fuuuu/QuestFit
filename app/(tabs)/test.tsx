@@ -20,45 +20,49 @@ export default function TestScreen() {
   const [duration, setDuration] = useState('30');
   const [avgHeartRate, setAvgHeartRate] = useState('145');
   const [sport, setSport] = useState('RUNNING');
+  const [distanceKm, setDistanceKm] = useState('5');
 
   // Quick test scenarios
   const scenarios = [
     {
       name: 'Easy Cycling',
       description: 'Should unlock Wind Falcon',
-      params: { calories: 300, duration: 25, avgHeartRate: 140, sport: 'CYCLING' }
+      params: { calories: 300, duration: 25, avgHeartRate: 140, distanceKm: 10, sport: 'CYCLING' }
     },
     {
       name: 'Moderate Run',
       description: 'Should unlock Thunder Wolf',
-      params: { calories: 400, duration: 30, avgHeartRate: 145, sport: 'RUNNING' }
+      params: { calories: 400, duration: 30, avgHeartRate: 145, distanceKm: 5, sport: 'RUNNING' }
     },
     {
       name: 'Intense Run',
       description: 'Should unlock Shadow Panther',
-      params: { calories: 450, duration: 40, avgHeartRate: 150, sport: 'RUNNING' }
+      params: { calories: 450, duration: 40, avgHeartRate: 150, distanceKm: 8, sport: 'RUNNING' }
     },
     {
       name: 'Swimming Session',
       description: 'Should unlock Aqua Serpent',
-      params: { calories: 200, duration: 30, avgHeartRate: 120, sport: 'SWIMMING' }
+      params: { calories: 200, duration: 30, avgHeartRate: 120, distanceKm: 1, sport: 'SWIMMING' }
     },
     {
       name: 'Hiking Trip',
       description: 'Should unlock Forest Spirit',
-      params: { calories: 250, duration: 45, avgHeartRate: 115, sport: 'HIKING' }
+      params: { calories: 250, duration: 45, avgHeartRate: 115, distanceKm: 6, sport: 'HIKING' }
     },
     {
       name: 'Epic Workout',
       description: 'Should unlock Flame Phoenix',
-      params: { calories: 600, duration: 60, avgHeartRate: 155, sport: 'FITNESS' }
+      params: { calories: 600, duration: 60, avgHeartRate: 155, distanceKm: 0, sport: 'FITNESS' }
     },
     {
       name: 'Ultra Session',
       description: 'Should unlock Golden Dragon',
-      params: { calories: 1000, duration: 90, avgHeartRate: 160, sport: 'RUNNING' }
+      params: { calories: 1000, duration: 90, avgHeartRate: 160, distanceKm: 15, sport: 'RUNNING' }
     },
   ];
+
+  const sportUsesDistance = (sportType: string) =>
+    ['RUNNING', 'CYCLING', 'HIKING', 'SWIMMING'].includes(sportType);
 
   const testWorkout = async (testParams?: any) => {
     if (!user) {
@@ -74,8 +78,17 @@ export default function TestScreen() {
         calories: parseInt(calories),
         duration: parseInt(duration),
         avgHeartRate: parseInt(avgHeartRate),
+        distanceKm: parseFloat(distanceKm),
         sport: sport
       };
+
+      const distanceKmValue = Number.isFinite(workoutParams.distanceKm)
+        ? workoutParams.distanceKm
+        : 0;
+
+      const normalizedDistanceKm = sportUsesDistance(workoutParams.sport)
+        ? Math.max(0, distanceKmValue)
+        : 0;
 
       console.log('Testing workout with params:', workoutParams);
 
@@ -103,6 +116,7 @@ export default function TestScreen() {
           maxHeartRate: workoutParams.avgHeartRate + 15,
           minHeartRate: workoutParams.avgHeartRate - 10,
           caloriesBurned: workoutParams.calories,
+          distanceMeters: Math.round(normalizedDistanceKm * 1000),
           currentZone: 3
         },
         workoutParams.sport
@@ -166,7 +180,7 @@ export default function TestScreen() {
               <Text style={styles.scenarioName}>{scenario.name}</Text>
               <Text style={styles.scenarioDescription}>{scenario.description}</Text>
               <Text style={styles.scenarioParams}>
-                {scenario.params.calories} cal • {scenario.params.duration} min • {scenario.params.sport}
+                {scenario.params.calories} cal • {scenario.params.duration} min • {scenario.params.distanceKm ?? 0} km • {scenario.params.sport}
               </Text>
             </View>
             <Text style={styles.scenarioArrow}>→</Text>
@@ -209,6 +223,20 @@ export default function TestScreen() {
           editable={!loading}
         />
 
+        {sportUsesDistance(sport) && (
+          <>
+            <Text style={styles.label}>Distance (km)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="5"
+              keyboardType="numeric"
+              value={distanceKm}
+              onChangeText={setDistanceKm}
+              editable={!loading}
+            />
+          </>
+        )}
+
         <Text style={styles.label}>Sport Type</Text>
         <View style={styles.sportGrid}>
           {['RUNNING', 'CYCLING', 'SWIMMING', 'HIKING', 'FITNESS'].map((sportType) => (
@@ -249,6 +277,12 @@ export default function TestScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Last Test Result</Text>
           <View style={styles.resultBox}>
+            <View style={styles.resultRow}>
+              <Text style={styles.resultLabel}>Distance:</Text>
+              <Text style={styles.resultValue}>
+                {lastResult.workoutSession?.distance != null ? `${lastResult.workoutSession.distance} km` : '—'}
+              </Text>
+            </View>
             <View style={styles.resultRow}>
               <Text style={styles.resultLabel}>Base XP:</Text>
               <Text style={styles.resultValue}>{lastResult.baseXP}</Text>
